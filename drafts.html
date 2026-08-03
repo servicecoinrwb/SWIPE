@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drafts · SWIPE</title>
+<meta name="description" content="Pre-funded payment instruments that can only be spent at one merchant.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#fbfbfc; --card:#ffffff; --ink:#0b0f14; --dim:#5a6570; --faint:#8b95a1;
+    --line:#e6e9ed; --line-2:#d3d9e0;
+    --brand:#0f7a6b; --brand-soft:#e6f4f1;
+    --lock:#b5822a; --lock-soft:#fdf3e1; --warn:#b4432f;
+    --paperblue:#f4f7fa;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-size:15.5px;line-height:1.6;
+    padding:26px 16px 80px;display:flex;justify-content:center;-webkit-font-smoothing:antialiased}
+  .shell{width:100%;max-width:680px}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:28px;flex-wrap:wrap}
+  .mark{font-weight:800;font-size:19px;letter-spacing:-.03em}
+  .mark i{font-style:normal;color:var(--brand)}
+  .nav{display:flex;gap:6px;flex-wrap:wrap}
+  .nav a{font-size:13px;font-weight:500;color:var(--dim);text-decoration:none;padding:6px 11px;border-radius:7px}
+  .nav a:hover,.nav a.on{background:var(--brand-soft);color:var(--brand)}
+
+  h1{font-size:clamp(26px,5.6vw,34px);line-height:1.14;letter-spacing:-.03em;font-weight:800;margin:0 0 8px}
+  h1 i{font-style:normal;color:var(--brand)}
+  .lede{font-size:16px;color:var(--dim);margin:0 0 24px;max-width:55ch}
+
+  /* SIGNATURE: the draft, drawn as the instrument it is */
+  .draft{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    overflow:hidden;margin-bottom:13px;position:relative}
+  .draft::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--brand)}
+  .draft.spent::before{background:var(--faint)}
+  .draft.expired::before{background:var(--warn)}
+  .draft.voided::before{background:var(--faint)}
+  .draft.voided,.draft.spent{opacity:.62}
+
+  .d-in{padding:20px 22px 20px 26px;background:
+    repeating-linear-gradient(-45deg,rgba(15,122,107,.018) 0 8px,transparent 8px 16px)}
+  .d-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+  .d-lab{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--faint);margin:0 0 5px}
+  .d-face{font-family:"DM Mono",monospace;font-weight:500;font-size:clamp(26px,6.5vw,36px);
+    line-height:1;letter-spacing:-.02em;margin:0}
+  .d-face small{font-size:12px;color:var(--faint);letter-spacing:.06em;margin-left:8px}
+  .d-state{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+    padding:4px 10px;border-radius:99px;white-space:nowrap}
+  .st-live{background:var(--brand-soft);color:var(--brand)}
+  .st-spent{background:#f2f4f6;color:var(--faint)}
+  .st-expired{background:#fdeeeb;color:var(--warn)}
+  .st-voided{background:#f2f4f6;color:var(--faint)}
+
+  .d-payee{margin:16px 0 0;padding-top:14px;border-top:1px dashed var(--line-2)}
+  .d-payee dt{font-family:"DM Mono",monospace;font-size:9px;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--faint);margin:0 0 4px}
+  .d-payee dd{margin:0 0 12px;font-size:15px;font-weight:600;overflow-wrap:anywhere}
+  .d-payee dd span{font-family:"DM Mono",monospace;font-size:11.5px;font-weight:400;color:var(--faint);display:block;margin-top:2px}
+  .d-memo{font-size:14px;color:var(--dim);font-style:italic;margin:0 0 12px}
+
+  .d-bar{display:flex;height:8px;border-radius:99px;overflow:hidden;background:#eef1f4;margin:4px 0 8px}
+  .d-bar i{display:block;background:var(--brand)}
+  .d-meta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    font-family:"DM Mono",monospace;font-size:11px;color:var(--dim)}
+  .d-meta b{color:var(--ink);font-weight:500}
+
+  .d-acts{display:flex;gap:9px;padding:14px 22px;border-top:1px solid var(--line);flex-wrap:wrap;background:#fcfdfd}
+  .d-acts:empty{display:none}
+  .d-acts button{flex:1;min-width:130px;width:auto;font-size:13.5px;padding:10px 14px}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:14px}
+  .card h2{font-size:17px;font-weight:700;letter-spacing:-.01em;margin:0 0 4px}
+  .how{font-size:13.5px;color:var(--dim);margin:0 0 16px}
+
+  .tabs{display:flex;gap:4px;margin-bottom:18px;background:#f4f6f8;padding:4px;border-radius:10px}
+  .tab{flex:1;text-align:center;font-size:13.5px;font-weight:600;padding:9px;border-radius:7px;
+    cursor:pointer;color:var(--dim);user-select:none}
+  .tab.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--dim);margin:0 0 6px}
+  input,select{width:100%;font-family:"DM Mono",monospace;font-size:14.5px;padding:11px 13px;
+    border:1px solid var(--line-2);border-radius:9px;background:#fff;color:var(--ink);margin-bottom:12px}
+  input:focus-visible,select:focus-visible{outline:2px solid var(--brand);outline-offset:-1px;border-color:transparent}
+  input::placeholder{color:#b6bec7}
+  button{font-family:"Plus Jakarta Sans",sans-serif;font-size:14.5px;font-weight:600;border:0;border-radius:9px;
+    padding:12px 18px;cursor:pointer;width:100%;background:var(--brand);color:#fff;transition:filter .14s}
+  button:hover:not(:disabled){filter:brightness(1.08)}
+  button:disabled{background:#eceff2;color:#a8b1ba;cursor:not-allowed}
+  button.ghost{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line-2)}
+  button.ghost:hover:not(:disabled){background:#f6f7f9;filter:none}
+  button.warn{background:#fff;color:var(--warn);box-shadow:inset 0 0 0 1px #f0cfc8}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .why{font-family:"DM Mono",monospace;font-size:11.5px;line-height:1.65;color:var(--dim);margin:10px 0 0}
+  .why.warn{color:var(--warn)} .why.ok{color:var(--brand)}
+  .quote{background:#f6f8f9;border-radius:10px;padding:12px 14px;margin:0 0 12px;
+    font-family:"DM Mono",monospace;font-size:12px;color:var(--dim);line-height:1.7}
+  .quote b{color:var(--ink);font-weight:600}
+
+  .note{font-family:"DM Mono",monospace;font-size:11px;line-height:1.75;color:var(--faint);
+    margin-top:22px;text-align:center}
+  .note a{color:var(--dim)}
+  .disc{border-left:2px solid var(--line-2);padding:2px 0 2px 14px;margin:16px 0 0;
+    font-size:12.5px;color:var(--faint);line-height:1.7}
+  a{color:var(--brand)}
+  .hidden{display:none !important}
+  @media (max-width:560px){ .two{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="mark">Dra<i>fts</i></div>
+    <nav class="nav">
+      <a href="./index.html">Home</a>
+      <a href="./merchants.html">Merchants</a>
+      <a href="./terminal.html">Accept</a>
+      <a href="./drafts.html" class="on">Drafts</a>
+      <a href="./interchange.html">Stake</a>
+      <a href="./pool.html">Pool</a>
+    </nav>
+  </div>
+
+  <h1>Money that can only go <i>one place.</i></h1>
+  <p class="lede">Fund an exact amount, name who may spend it and where. It can't be redirected, can't be cashed out, and comes back to you if it isn't used. A lender hasn't given anyone money — they've paid an invoice in advance.</p>
+
+  <div class="tabs">
+    <div class="tab on" id="tHeld">Mine to spend</div>
+    <div class="tab" id="tIssued">I funded</div>
+    <div class="tab" id="tNew">Issue one</div>
+  </div>
+
+  <!-- HELD -->
+  <div id="paneHeld">
+    <div id="heldList"><p class="why">Connect a wallet to see drafts made out to you.</p></div>
+  </div>
+
+  <!-- ISSUED -->
+  <div id="paneIssued" class="hidden">
+    <div id="issuedList"><p class="why">Connect a wallet to see what you've funded.</p></div>
+  </div>
+
+  <!-- ISSUE -->
+  <div id="paneNew" class="hidden">
+    <section class="card">
+      <h2>Issue a draft</h2>
+      <p class="how">The full amount leaves your wallet now and sits locked until it's spent or expires. That's what makes it worth something to the person holding it.</p>
+      <label for="nHolder">Who may spend it</label>
+      <input id="nHolder" placeholder="0x… the customer's wallet" autocomplete="off">
+      <label for="nMerchant">Where they may spend it</label>
+      <select id="nMerchant"><option value="">Loading merchants…</option></select>
+      <div class="two">
+        <div>
+          <label for="nFace">Amount (USDC)</label>
+          <input id="nFace" placeholder="9000.00" inputmode="decimal" autocomplete="off">
+        </div>
+        <div>
+          <label for="nWindow">Good for</label>
+          <select id="nWindow">
+            <option value="86400">1 day</option>
+            <option value="604800">1 week</option>
+            <option value="2592000" selected>30 days</option>
+            <option value="7776000">90 days</option>
+            <option value="31536000">1 year</option>
+          </select>
+        </div>
+      </div>
+      <label for="nMemo">What it's for — public forever</label>
+      <input id="nMemo" placeholder="Job 4471 — condenser changeout" maxlength="80" autocomplete="off">
+      <p class="quote" id="newQuote">Fill it in to see what you're committing.</p>
+      <button id="issueBtn" disabled>Connect wallet</button>
+      <p class="why" id="newWhy"></p>
+    </section>
+  </div>
+
+  <section class="card" id="connectCard">
+    <h2>Your wallet</h2>
+    <p class="how" id="connHow">Connect to issue, hold or spend.</p>
+    <button id="connectBtn">Connect wallet</button>
+    <p class="why" id="connWhy"></p>
+  </section>
+
+  <p class="note">
+    Drafts <a href="https://testnet.arcscan.app/address/0x817b890a920292bf3BC5B8746f94c729cF8ad8AD" target="_blank" rel="noopener">0x817b…d8AD</a> ·
+    settles through <a href="./terminal.html">Terminal</a> ·
+    <a href="https://faucet.circle.com" target="_blank" rel="noopener">Get testnet USDC</a>
+  </p>
+  <div class="disc">
+    This contract has no opinion about credit. It doesn't check anyone's ability to repay, doesn't record a debt, and won't chase one — the lending relationship lives entirely off this chain. All it guarantees is that the money reaches the merchant it names or returns to whoever funded it, and nowhere else.
+  </div>
+</div>
+
+<script>
+const NET={ label:"Arc Testnet", chainId:5042002,
+  rpcs:["https://rpc.blockdaemon.testnet.arc.network","https://arc-testnet.drpc.org","https://rpc.quicknode.testnet.arc.network","https://5042002.rpc.thirdweb.com"],
+  explorer:"https://testnet.arcscan.app",
+  drafts:"0x817b890a920292bf3BC5B8746f94c729cF8ad8AD",
+  terminal:"0xDBc6e2ACC9B739417412AD675ef0740E3fA224f9",
+  usdc:"0x3600000000000000000000000000000000000000" };
+const DR=NET.drafts, TM=NET.terminal, USDC=NET.usdc, RPCS=NET.rpcs, CHAIN=NET.chainId;
+
+const ABI=[
+  "function draftOf(uint256) view returns (tuple(bool exists,address issuer,address holder,address merchant,uint256 face,uint256 spent,uint256 remaining,uint64 issuedAt,uint64 expiresAt,uint64 secondsLeft,uint8 state,bool reclaimed,string memo))",
+  "function draftsHeldBy(address) view returns (uint256[])",
+  "function draftsIssuedBy(address) view returns (uint256[])",
+  "function issue(address,address,uint256,uint64,string) returns (uint256)",
+  "function spend(uint256,address,uint256,string) returns (uint256)",
+  "function void(uint256) returns (uint256)",
+  "function reclaim(uint256) returns (uint256)",
+  "error ZeroAddress()","error ZeroAmount()","error BadWindow()","error NoSuchDraft()",
+  "error NotHolder()","error NotIssuer()","error NotThatMerchant(address named,address tried)",
+  "error MerchantNotOnRail()","error MerchantNotAccepting()","error DraftExpired(uint64 at)",
+  "error DraftVoided()","error DraftSpent()","error StillLive(uint64 until)",
+  "error OverRemaining(uint256 asked,uint256 left)","error NothingToReclaim()","error Reentrant()"
+];
+const TABI=[
+  "function merchantCount() view returns (uint256)",
+  "function merchantAt(uint256) view returns (address)",
+  "function merchantOf(address) view returns (tuple(bool exists,bool closed,address payout,string name,uint256 received,uint256 feesPaid,uint256 refunded,uint32 payments,uint64 since))",
+  "function feeOn(uint256) pure returns (uint256)"
+];
+const ERC=["function approve(address,uint256) returns (bool)","function allowance(address,address) view returns (uint256)","function balanceOf(address) view returns (uint256)"];
+const IFACE=new ethers.Interface(ABI);
+const ARC={chainId:"0x"+CHAIN.toString(16),chainName:NET.label,
+  nativeCurrency:{name:"USDC",symbol:"USDC",decimals:18},rpcUrls:RPCS,blockExplorerUrls:[NET.explorer]};
+
+const $=id=>document.getElementById(id);
+const f=v=>Number(ethers.formatUnits(v,6)).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const p6=s=>ethers.parseUnits(s,6);
+const shortA=a=>a.slice(0,6)+"…"+a.slice(-4);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function left(s){
+  if(s<=0) return "expired";
+  const d=Math.floor(s/86400), h=Math.floor(s%86400/3600);
+  if(d>0) return d+"d "+h+"h left";
+  const m=Math.floor(s%3600/60);
+  return h>0 ? h+"h "+m+"m left" : m+"m left";
+}
+
+const pool=RPCS.map(u=>new ethers.JsonRpcProvider(u));
+let wp=null;
+const readers=()=>wp?[wp,...pool]:pool;
+async function rd(addr,abi,fn){ let e; for(const p of readers()){ try{ return await fn(new ethers.Contract(addr,abi,p)); }catch(x){e=x;} } throw e; }
+
+let signer=null,me=null,bal=0n,al=0n,merchants=[],tab="held";
+const STATES=["Live","Spent","Expired","Voided"];
+
+/* ---------------- tabs ---------------- */
+function setTab(t){
+  tab=t;
+  $("tHeld").classList.toggle("on",t==="held");
+  $("tIssued").classList.toggle("on",t==="issued");
+  $("tNew").classList.toggle("on",t==="new");
+  $("paneHeld").classList.toggle("hidden",t!=="held");
+  $("paneIssued").classList.toggle("hidden",t!=="issued");
+  $("paneNew").classList.toggle("hidden",t!=="new");
+}
+$("tHeld").onclick=()=>setTab("held");
+$("tIssued").onclick=()=>setTab("issued");
+$("tNew").onclick=()=>setTab("new");
+
+/* ---------------- merchants for the picker ---------------- */
+async function loadMerchants(){
+  try{
+    const n=Number(await rd(TM,TABI,c=>c.merchantCount()));
+    merchants=[];
+    for(let i=n-1;i>=0;i--){
+      const a=await rd(TM,TABI,c=>c.merchantAt(i));
+      const m=await rd(TM,TABI,c=>c.merchantOf(a));
+      if(m.exists && !m.closed) merchants.push({addr:a,name:m.name});
+    }
+    $("nMerchant").innerHTML = merchants.length
+      ? merchants.map(m=>'<option value="'+m.addr+'">'+esc(m.name||"(unnamed)")+' · '+shortA(m.addr)+'</option>').join("")
+      : '<option value="">No merchants accepting yet</option>';
+  }catch(e){ $("nMerchant").innerHTML='<option value="">Couldn&rsquo;t load merchants</option>'; }
+  quoteNew();
+}
+
+/* ---------------- the draft card ---------------- */
+function cardFor(id,v,mine){
+  const st=Number(v.state);
+  const cls=["","spent","expired","voided"][st];
+  const pct = v.face>0n ? Number(v.spent*10000n/v.face)/100 : 0;
+  const mName=(merchants.find(m=>m.addr.toLowerCase()===v.merchant.toLowerCase())||{}).name;
+
+  let acts="";
+  if(mine==="held" && st===0)
+    acts+='<button data-spend="'+id+'">Spend '+f(v.remaining)+'</button>';
+  if(mine==="held" && st===0)
+    acts+='<button class="ghost" data-void="'+id+'">Return it unused</button>';
+  if(mine==="issued" && st===0)
+    acts+='<button class="warn" data-void="'+id+'">Cancel and take back</button>';
+  if(mine==="issued" && st===2 && !v.reclaimed && v.remaining>0n)
+    acts+='<button data-reclaim="'+id+'">Reclaim '+f(v.remaining)+'</button>';
+
+  return '<div class="draft '+cls+'">'+
+    '<div class="d-in">'+
+      '<div class="d-top"><div>'+
+        '<p class="d-lab">Draft #'+id+' · face value</p>'+
+        '<p class="d-face">'+f(v.face)+'<small>USDC</small></p>'+
+      '</div><span class="d-state st-'+["live","spent","expired","voided"][st]+'">'+STATES[st]+'</span></div>'+
+
+      '<dl class="d-payee">'+
+        '<dt>Spendable only at</dt>'+
+        '<dd>'+esc(mName||"a merchant on the rail")+'<span>'+v.merchant+'</span></dd>'+
+        '<dt>'+(mine==="issued"?"Held by":"Funded by")+'</dt>'+
+        '<dd style="font-weight:500;font-size:13.5px">'+shortA(mine==="issued"?v.holder:v.issuer)+'</dd>'+
+      '</dl>'+
+      (v.memo ? '<p class="d-memo">"'+esc(v.memo)+'"</p>' : '')+
+      (v.spent>0n ? '<div class="d-bar"><i style="width:'+pct+'%"></i></div>' : '')+
+      '<div class="d-meta">'+
+        '<span>Left <b>'+f(v.remaining)+'</b></span>'+
+        (v.spent>0n?'<span>Spent <b>'+f(v.spent)+'</b></span>':'')+
+        '<span>'+(st===0?left(Number(v.secondsLeft)):
+                  st===1?"fully spent":
+                  st===2?(v.reclaimed?"expired, reclaimed":"expired"):"cancelled")+'</span>'+
+      '</div>'+
+    '</div>'+
+    (acts?'<div class="d-acts">'+acts+'</div>':'')+
+  '</div>';
+}
+
+async function loadLists(){
+  if(!me) return;
+  try{
+    const held=await rd(DR,ABI,c=>c.draftsHeldBy(me));
+    const rows=[];
+    for(const i of [...held].reverse()){
+      const v=await rd(DR,ABI,c=>c.draftOf(i));
+      if(v.exists) rows.push(cardFor(Number(i),v,"held"));
+    }
+    $("heldList").innerHTML = rows.join("") ||
+      '<p class="why">No drafts made out to you. Whoever is funding your job issues one to your wallet address.</p>';
+
+    const iss=await rd(DR,ABI,c=>c.draftsIssuedBy(me));
+    const rows2=[];
+    for(const i of [...iss].reverse()){
+      const v=await rd(DR,ABI,c=>c.draftOf(i));
+      if(v.exists) rows2.push(cardFor(Number(i),v,"issued"));
+    }
+    $("issuedList").innerHTML = rows2.join("") ||
+      '<p class="why">You haven&rsquo;t funded any. Issuing one locks the amount until it&rsquo;s spent or expires.</p>';
+
+    bind();
+  }catch(e){ console.error(e); }
+}
+
+function bind(){
+  document.querySelectorAll("[data-spend]").forEach(b=>b.onclick=()=>doSpend(Number(b.dataset.spend),b));
+  document.querySelectorAll("[data-void]").forEach(b=>b.onclick=()=>doVoid(Number(b.dataset.void),b));
+  document.querySelectorAll("[data-reclaim]").forEach(b=>b.onclick=()=>doReclaim(Number(b.dataset.reclaim),b));
+}
+
+/* ---------------- issue quote ---------------- */
+async function quoteNew(){
+  const h=$("nHolder").value.trim(), m=$("nMerchant").value, v=$("nFace").value.trim();
+  if(!ethers.isAddress(h)||!m||!v||isNaN(v)||Number(v)<=0){
+    $("newQuote").textContent="Fill it in to see what you're committing.";
+    $("issueBtn").disabled=!signer; 
+    $("issueBtn").textContent = signer?"Issue the draft":"Connect wallet";
+    return;
+  }
+  let a; try{ a=p6(v); }catch{ return; }
+  if(a<p6("1")){ $("newQuote").innerHTML="Minimum face value is <b>1.00 USDC</b>."; $("issueBtn").disabled=true; return; }
+  if(me && a>bal){
+    $("newQuote").innerHTML="You hold <b>"+f(bal)+" USDC</b> — the full amount leaves your wallet at issue, not when it's spent.";
+    $("issueBtn").disabled=true; return;
+  }
+  let fee=0n; try{ fee=await rd(TM,TABI,c=>c.feeOn(a)); }catch(_){}
+  const mn=(merchants.find(x=>x.addr.toLowerCase()===m.toLowerCase())||{}).name||shortA(m);
+  $("newQuote").innerHTML="<b>"+f(a)+" USDC</b> leaves your wallet now and locks. "+
+    shortA(h)+" can spend it only at <b>"+esc(mn)+"</b>, in one go or in parts. "+
+    "When they do, the merchant nets about <b>"+f(a-fee)+"</b> after the rail's fee. "+
+    "Anything unspent comes back to you.";
+  $("issueBtn").disabled=!signer;
+  $("issueBtn").textContent = !signer ? "Connect wallet" : (al<a ? "Approve, then issue" : "Issue the draft");
+}
+["nHolder","nFace"].forEach(id=>$(id).addEventListener("input",quoteNew));
+$("nMerchant").addEventListener("change",quoteNew);
+
+/* ---------------- connect ---------------- */
+(async function boot(){
+  await loadMerchants();
+  if(!window.ethereum) return;
+  try{ const a=await window.ethereum.request({method:"eth_accounts"}); if(a&&a.length) await connect(true); }catch(_){}
+})();
+$("connectBtn").onclick=()=>connect(false);
+$("issueBtn").onclick=()=>signer?doIssue():connect(false);
+
+async function connect(silent){
+  if(!window.ethereum){
+    if(!silent){ $("connWhy").textContent="No wallet in this browser."; $("connWhy").className="why warn"; }
+    return;
+  }
+  try{
+    if(!silent) await window.ethereum.request({method:"eth_requestAccounts"});
+    const n=await window.ethereum.request({method:"eth_chainId"});
+    if(parseInt(n,16)!==CHAIN){
+      try{ await window.ethereum.request({method:"wallet_switchEthereumChain",params:[{chainId:ARC.chainId}]}); }
+      catch(e){ if(e.code===4902) await window.ethereum.request({method:"wallet_addEthereumChain",params:[ARC]}); else throw e; }
+    }
+    const bp=new ethers.BrowserProvider(window.ethereum);
+    wp=bp; signer=await bp.getSigner(); me=await signer.getAddress();
+    $("connectCard").classList.add("hidden");
+    try{ bal=await rd(USDC,ERC,c=>c.balanceOf(me)); al=await rd(USDC,ERC,c=>c.allowance(me,DR)); }catch(_){}
+    await loadLists(); quoteNew();
+  }catch(e){
+    if(!silent){ $("connWhy").textContent="Wallet didn't connect: "+(e.shortMessage||e.message); $("connWhy").className="why warn"; }
+  }
+}
+
+/* ---------------- write ---------------- */
+const ERRS={
+  ZeroAmount:"Minimum face value is 1.00 USDC.",
+  BadWindow:"That window is outside the allowed range.",
+  NotHolder:"This draft isn't made out to you.",
+  NotIssuer:"Only the issuer or the holder can do that.",
+  NotThatMerchant:"This draft can only be spent at the merchant it names.",
+  MerchantNotOnRail:"That address doesn't have a Terminal account, so a draft naming it could never be spent.",
+  MerchantNotAccepting:"That merchant has stopped accepting payments.",
+  DraftExpired:"This draft has expired. The funds go back to whoever issued it.",
+  DraftVoided:"This one was already cancelled.",
+  DraftSpent:"Nothing left on it.",
+  StillLive:"Not expired yet — the holder can still spend it.",
+  OverRemaining:"That's more than is left on the draft.",
+  NothingToReclaim:"Nothing left to take back.",
+  ZeroAddress:"That address isn't valid."
+};
+function why(e){
+  const m=e.shortMessage||e.message||"";
+  if(m.includes("rejected")||e?.code==="ACTION_REJECTED") return "You rejected the signature. Nothing happened.";
+  let r=e?.revert;
+  if(!r){ const d=e?.data||e?.info?.error?.data||e?.error?.data;
+    if(typeof d==="string"){ try{ r=IFACE.parseError(d); }catch(_){} } }
+  if(r&&ERRS[r.name]){
+    if(r.name==="OverRemaining"&&r.args) return "Only "+f(r.args[1])+" USDC is left on that draft.";
+    return ERRS[r.name];
+  }
+  if(r) return "Reverted: "+r.name;
+  if(m.includes("insufficient funds")) return "Not enough USDC to cover it plus gas.";
+  return "Failed: "+m;
+}
+
+async function doIssue(){
+  const b=$("issueBtn"); b.disabled=true;
+  try{
+    const h=$("nHolder").value.trim();
+    if(!ethers.isAddress(h)) throw new Error("That holder address isn't valid");
+    const m=$("nMerchant").value;
+    if(!ethers.isAddress(m)) throw new Error("Pick a merchant");
+    const a=p6($("nFace").value.trim());
+    if(al<a){
+      b.textContent="Approve…";
+      const u=new ethers.Contract(USDC,ERC,signer);
+      await (await u.approve(DR,a)).wait(); al=a;
+    }
+    b.textContent="Issuing…";
+    const c=new ethers.Contract(DR,ABI,signer);
+    await (await c.issue(h,m,a,parseInt($("nWindow").value,10),$("nMemo").value.trim())).wait();
+    $("nFace").value=""; $("nMemo").value="";
+    try{ bal=await rd(USDC,ERC,x=>x.balanceOf(me)); }catch(_){}
+    await loadLists(); setTab("issued");
+    $("newWhy").textContent="Issued. The funds are locked and can only reach that merchant or come back to you.";
+    $("newWhy").className="why ok";
+  }catch(e){ $("newWhy").textContent=why(e); $("newWhy").className="why warn"; }
+  finally{ b.disabled=false; quoteNew(); }
+}
+
+let armed=null;
+async function doSpend(id,btn){
+  btn.disabled=true; btn.textContent="Confirm…";
+  try{
+    const v=await rd(DR,ABI,c=>c.draftOf(id));
+    const c=new ethers.Contract(DR,ABI,signer);
+    await (await c.spend(id,v.merchant,v.remaining,"draft-"+id)).wait();
+    await loadLists();
+  }catch(e){ alert(why(e)); btn.disabled=false; btn.textContent="Spend"; }
+}
+async function doVoid(id,btn){
+  if(armed!==id){
+    armed=id; const old=btn.textContent;
+    btn.textContent="Confirm — cancel it?";
+    setTimeout(()=>{ if(armed===id){ armed=null; btn.textContent=old; } },6000);
+    return;
+  }
+  armed=null; btn.disabled=true; btn.textContent="Confirm…";
+  try{
+    const c=new ethers.Contract(DR,ABI,signer);
+    await (await c.void(id)).wait();
+    try{ bal=await rd(USDC,ERC,x=>x.balanceOf(me)); }catch(_){}
+    await loadLists();
+  }catch(e){ alert(why(e)); btn.disabled=false; }
+}
+async function doReclaim(id,btn){
+  btn.disabled=true; btn.textContent="Confirm…";
+  try{
+    const c=new ethers.Contract(DR,ABI,signer);
+    await (await c.reclaim(id)).wait();
+    try{ bal=await rd(USDC,ERC,x=>x.balanceOf(me)); }catch(_){}
+    await loadLists();
+  }catch(e){ alert(why(e)); btn.disabled=false; }
+}
+</script>
+</body>
+</html>
