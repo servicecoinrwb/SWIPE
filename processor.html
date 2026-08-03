@@ -191,21 +191,28 @@
 <script>
 const RPCS=["https://rpc.blockdaemon.testnet.arc.network","https://arc-testnet.drpc.org","https://rpc.quicknode.testnet.arc.network","https://5042002.rpc.thirdweb.com"];
 const TM="0xB21b0396896Caf29Ab9306F9eA958E6E805d967c";
+const IC="0xebaAe1809B2F05183Eda97e85C9fbCD74a8E5116";
 const pool=RPCS.map(u=>new ethers.JsonRpcProvider(u));
 const $=id=>document.getElementById(id);
 const u6=v=>Number(ethers.formatUnits(v,6)).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 (async function(){
-  const abi=["function book() view returns (tuple(uint256 volume,uint256 feesRouted,uint256 payments,uint256 merchants,uint256 rewarded,uint256 rewardsMissed,uint16 feeBps,address sink))"];
+  // Volume and merchant count live on the rail; minted supply lives on the
+  // pool, because the pool is what mints it.
+  const tAbi=["function book() view returns (tuple(uint256 volume,uint256 feesRouted,uint256 payments,uint256 merchants,uint16 feeBps,address sink))"];
+  const iAbi=["function book() view returns (tuple(uint256 supply,uint256 escrowSupply,uint256 totalStaked,uint256 totalVesting,uint256 feesReceived,uint256 feesPaid,uint256 volumeProcessed,uint256 mintedToMerchants,uint256 emittedToStakers,uint256 stakedPct,address terminal))"];
   for(const p of pool){
     try{
-      const b=await new ethers.Contract(TM,abi,p).book();
+      const b=await new ethers.Contract(TM,tAbi,p).book();
       $("sVol").textContent=u6(b.volume);
       $("sFees").textContent=u6(b.feesRouted);
       $("sMerch").textContent=b.merchants.toString();
-      const minted=Number(ethers.formatUnits(b.rewarded,18));
-      $("earnLine").textContent = minted>0
-        ? minted.toLocaleString("en-US",{maximumFractionDigits:2})+" SWIPE minted so far — every unit of it by a merchant processing a payment."
-        : "Supply is zero. It stays zero until somebody processes a payment, because there is no other way to create any.";
+      try{
+        const i=await new ethers.Contract(IC,iAbi,p).book();
+        const minted=Number(ethers.formatUnits(i.mintedToMerchants,18));
+        $("earnLine").textContent = minted>0
+          ? minted.toLocaleString("en-US",{maximumFractionDigits:2})+" SWIPE minted so far — every unit of it by a merchant processing a payment."
+          : "Supply is zero. It stays zero until somebody processes a payment, because there is no other way to create any.";
+      }catch(_){}
       return;
     }catch(e){}
   }
