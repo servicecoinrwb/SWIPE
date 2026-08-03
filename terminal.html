@@ -42,6 +42,7 @@
   .nav a.on{background:var(--brand-soft);color:var(--brand)}
 
   h1{font-size:clamp(26px,5.6vw,34px);line-height:1.14;letter-spacing:-.03em;font-weight:800;margin:0 0 8px}
+  h1 i{font-style:normal;color:var(--brand)}
   .lede{font-size:16px;color:var(--dim);margin:0 0 26px;max-width:52ch}
 
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:14px}
@@ -64,6 +65,9 @@
   .legs{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:10px;
     font-size:12.5px;color:var(--dim)}
   .legs b{color:var(--ink);font-weight:600}
+  .earn{background:#fdf3e1;border-radius:8px;padding:10px 13px;margin:12px 0 0;
+    font-family:"DM Mono",monospace;font-size:12px;color:#7a5714}
+  .earn b{color:#4a340a}
   .cmp{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);
     font-family:"DM Mono",monospace;font-size:12px;color:var(--dim)}
   .cmp b{color:var(--ink)}
@@ -125,8 +129,8 @@
     </nav>
   </div>
 
-  <h1>Take a payment. Keep 97.5% of it.</h1>
-  <p class="lede">Settles in the same transaction — not in two days. The 2.5% doesn't go to a company; it goes to whoever staked.</p>
+  <h1>Take a payment. Keep 97.5% <i>and earn the rest back.</i></h1>
+  <p class="lede">Settles in the same transaction — not in two days. The 2.5% goes to stakers rather than a company, and you earn one esSWIPE for every dollar you process.</p>
 
   <!-- SIGNATURE: the split -->
   <section class="split">
@@ -141,6 +145,7 @@
         <span>You receive <b id="netOut">97.50</b> instantly</span>
         <span><b id="feeOut">2.50</b> to the staking pool</span>
       </div>
+      <p class="earn" id="earnOut">and you earn <b>100.00 esSWIPE</b> — stake it to take a cut of everyone else's fees</p>
       <p class="cmp" id="cmpOut"></p>
     </div>
     <dl class="stats">
@@ -161,6 +166,7 @@
         <div class="row"><dt>Received</dt><dd id="mRecv">—</dd></div>
         <div class="row"><dt>Fees paid</dt><dd id="mFees">—</dd></div>
         <div class="row"><dt>Payments taken</dt><dd id="mCount">—</dd></div>
+        <div class="row"><dt>esSWIPE earned</dt><dd id="mEarn">—</dd></div>
       </dl>
       <div class="link" id="payLink"></div>
       <div class="two" style="margin-top:12px">
@@ -196,10 +202,13 @@
   </section>
 
   <p class="note">
-    Terminal <a href="https://testnet.arcscan.app/address/0xC168439DbFA9Ea78C32A0e3dB99eBA9284B860A3" target="_blank" rel="noopener">0xC168…60A3</a> ·
-    fees to <a href="https://testnet.arcscan.app/address/0xa551b604bf2BEd9D52cA80e5602836B67403b98E" target="_blank" rel="noopener">Interchange</a><br>
+    Terminal <a href="https://testnet.arcscan.app/address/0x8c875a187e4650B4a207Cd4d5049229E3c7c878f" target="_blank" rel="noopener">0x8c87…878f</a> ·
+    fees to <a href="https://testnet.arcscan.app/address/0x5A1b6CD6b967dACc11420Df71300Fd4BeBFECcD5" target="_blank" rel="noopener">Interchange</a><br>
     Arc Testnet · unaudited · play money only
   </p>
+  <div class="disc">
+    Earning is minted by the staking pool itself, and the rail's permission to mint was set once and can never be moved — so it's a rule rather than a policy. If it ever fails, the payment still settles and the skipped reward is recorded publicly.
+  </div>
   <div class="disc">
     No chargebacks, no disputes, no refunds this contract can enforce, no fraud screening and no compliance of any kind. A card network is mostly those things and only incidentally a way to move money — this is the moving-money part, which is the easy part.
   </div>
@@ -209,7 +218,7 @@
 const NET={ label:"Arc Testnet", chainId:5042002,
   rpcs:["https://rpc.blockdaemon.testnet.arc.network","https://arc-testnet.drpc.org","https://rpc.quicknode.testnet.arc.network","https://5042002.rpc.thirdweb.com","https://rpc.testnet.arc.network","https://rpc.testnet.arc.io"],
   explorer:"https://testnet.arcscan.app",
-  terminal:"0xC168439DbFA9Ea78C32A0e3dB99eBA9284B860A3",
+  terminal:"0x8c875a187e4650B4a207Cd4d5049229E3c7c878f",
   usdc:"0x3600000000000000000000000000000000000000" };
 const TM=NET.terminal, USDC=NET.usdc, RPCS=NET.rpcs, CHAIN=NET.chainId;
 const DEC=6n;
@@ -274,6 +283,8 @@ async function quote(){
     $("barF").textContent=f(q[2]);
     $("netOut").textContent=f(q[1]);
     $("feeOut").textContent=f(q[2]);
+    // one esSWIPE per unit of volume — the reward scale bridges 6dp to 18dp
+    $("earnOut").innerHTML="and you earn <b>"+f(q[0])+" esSWIPE</b> — stake it to take a cut of everyone else's fees";
     const save=q[3]-q[2];
     $("cmpOut").innerHTML = save>0n
       ? 'A card processor at 2.9% + 30¢ would take <b>'+f(q[3])+'</b> — you keep <span class="save">'+f(save)+' more</span>.'
@@ -310,6 +321,9 @@ function renderMerchant(){
   $("mRecv").textContent=f(merch.received)+" USDC";
   $("mFees").textContent=f(merch.feesPaid)+" USDC";
   $("mCount").textContent=merch.payments;
+  // volume in 6dp equals esSWIPE in 18dp at a 1:1 rate, so gross ≈ earned
+  const gross = merch.received + merch.feesPaid;
+  $("mEarn").textContent = f(gross)+" esSWIPE";
 
   const url=location.origin+location.pathname+"?to="+me;
   $("payLink").textContent=url;
