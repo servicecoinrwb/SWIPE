@@ -125,6 +125,7 @@
       <a href="./processor.html">Overview</a>
       <a href="./terminal.html" class="on">Accept</a>
       <a href="./interchange.html">Stake</a>
+      <a href="./pool.html">Pool</a>
       <a href="./processor-guide.html">How it works</a>
     </nav>
   </div>
@@ -224,7 +225,7 @@ const TM=NET.terminal, USDC=NET.usdc, RPCS=NET.rpcs, CHAIN=NET.chainId;
 const DEC=6n;
 
 const ABI=[
-  "function book() view returns (tuple(uint256 volume,uint256 feesRouted,uint256 payments,uint256 merchants,uint256 rewarded,uint256 rewardsMissed,uint16 feeBps,address sink))",
+  "function book() view returns (tuple(uint256 volume,uint256 feesRouted,uint256 payments,uint256 merchants,uint16 feeBps,address sink))",
   "function merchantOf(address) view returns (tuple(bool exists,bool closed,address payout,string name,uint256 received,uint256 feesPaid,uint32 payments,uint64 since))",
   "function quote(uint256) view returns (uint256 gross,uint256 net,uint256 fee,uint256 stripeWouldCost)",
   "function open(string,address)","function setPayout(address)","function close()",
