@@ -126,6 +126,11 @@
       <div><b><span class="amt">2.50</span> lands in the staking pool</b>
         <span>Every staker's claim rises the instant it arrives. Nobody decides later what to do with it, because there is no function that could.</span></div>
     </div>
+    <div class="step">
+      <div class="dot gold">4</div>
+      <div><b>The merchant earns <span class="amt">100 esSWIPE</span></b>
+        <span>One per dollar processed, minted by the pool rather than handed out. The rail's authorisation to mint was set once and can never be moved — so this is a rule, not a policy.</span></div>
+    </div>
   </section>
 
   <dl class="stats">
@@ -133,6 +138,7 @@
     <div><dt>Fees to stakers</dt><dd id="sFees">—</dd></div>
     <div><dt>Merchants</dt><dd id="sMerch">—</dd></div>
   </dl>
+  <p class="body" style="margin-top:-18px;font-family:'DM Mono',monospace;font-size:12px;color:var(--faint)" id="earnLine"></p>
 
   <h2>What it actually costs</h2>
   <p class="body">Straight comparison against 2.9% + 30¢. The saving is real and it is not enormous — anyone telling you a few basis points changes your business is selling something.</p>
@@ -156,7 +162,7 @@
     <div class="side g">
       <p class="k">Holders</p>
       <h3>Take the fees</h3>
-      <p>Stake SWIPE and receive a share of every fee the network collects, in USDC. Nothing is minted to pay you — the yield is money that actually came in.</p>
+      <p>Merchants earn esSWIPE by processing. Stake it and receive a share of every fee the network collects, in USDC — nothing is minted to pay you, the yield is money that actually came in.</p>
       <a class="go g" href="./interchange.html">Stake</a>
     </div>
   </div>
@@ -166,31 +172,35 @@
     <p><b>It isn't a card network.</b> No chargebacks, no disputes, no fraud screening, no identity checks, no compliance. Those are most of what a processor really sells, and none of them are here. This is only the moving-money part, which is the easy part.</p>
     <p><b>The customer needs USDC.</b> That's the real adoption problem and no amount of contract design solves it. Until someone can pay from a card and have it arrive as stablecoin, this is for people who already hold it.</p>
     <p><b>Percentage pricing breaks on large tickets.</b> 2.5% of a $38,000 equipment job is $950 to move a wire, which is indefensible however it compares to a card network. The rate is immutable, so the honest fix is a second deployment at a lower rate rather than an operator who can change the price.</p>
-    <p><b>SWIPE is handed out, not earned.</b> Today the operator issues it manually. Merchants earning it by volume would be a better design and a truthful pitch; that isn't what's deployed, and the page says so rather than implying otherwise.</p>
+    <p><b>The token still isn't a fair launch.</b> Merchants now earn esSWIPE automatically — one per dollar processed, minted by the pool itself, with the authorisation permanently fixed. But the operator can also still issue by hand, so the supply isn't purely earned. Watch <code>earnedTotal</code> against total supply if you want to know how much of it was worked for.</p>
     <p><b>Unaudited, on a testnet.</b> The fee accounting is verified against a simulation of 20,000 randomized staking pools with no pool ever paying out more than it took in — a bug the first version had. That is not a professional review.</p>
   </div>
 
   <footer>
-    Terminal <a href="https://testnet.arcscan.app/address/0xC168439DbFA9Ea78C32A0e3dB99eBA9284B860A3" target="_blank" rel="noopener">0xC168…60A3</a> ·
-    Interchange <a href="https://testnet.arcscan.app/address/0xa551b604bf2BEd9D52cA80e5602836B67403b98E" target="_blank" rel="noopener">0xa551…b98E</a><br>
+    Terminal <a href="https://testnet.arcscan.app/address/0x8c875a187e4650B4a207Cd4d5049229E3c7c878f" target="_blank" rel="noopener">0x8c87…878f</a> ·
+    Interchange <a href="https://testnet.arcscan.app/address/0x5A1b6CD6b967dACc11420Df71300Fd4BeBFECcD5" target="_blank" rel="noopener">0x5A1b…CcD5</a><br>
     Arc Testnet, chain 5042002 — both verified onchain, read the source before you trust the page.
   </footer>
 </div>
 
 <script>
 const RPCS=["https://rpc.blockdaemon.testnet.arc.network","https://arc-testnet.drpc.org","https://rpc.quicknode.testnet.arc.network","https://5042002.rpc.thirdweb.com","https://rpc.testnet.arc.network","https://rpc.testnet.arc.io"];
-const TM="0xC168439DbFA9Ea78C32A0e3dB99eBA9284B860A3";
+const TM="0x8c875a187e4650B4a207Cd4d5049229E3c7c878f";
 const pool=RPCS.map(u=>new ethers.JsonRpcProvider(u));
 const $=id=>document.getElementById(id);
 const u6=v=>Number(ethers.formatUnits(v,6)).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 (async function(){
-  const abi=["function book() view returns (tuple(uint256 volume,uint256 feesRouted,uint256 payments,uint256 merchants,uint16 feeBps,address sink))"];
+  const abi=["function book() view returns (tuple(uint256 volume,uint256 feesRouted,uint256 payments,uint256 merchants,uint256 rewarded,uint256 rewardsMissed,uint16 feeBps,address sink))"];
   for(const p of pool){
     try{
       const b=await new ethers.Contract(TM,abi,p).book();
       $("sVol").textContent=u6(b.volume);
       $("sFees").textContent=u6(b.feesRouted);
       $("sMerch").textContent=b.merchants.toString();
+      const earned=Number(ethers.formatUnits(b.rewarded,18));
+      $("earnLine").textContent = earned>0
+        ? earned.toLocaleString("en-US",{maximumFractionDigits:2})+" esSWIPE earned by merchants so far — one per dollar processed."
+        : "No volume yet, so nothing earned. Merchants mint one esSWIPE per dollar they process.";
       return;
     }catch(e){}
   }
