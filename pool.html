@@ -129,8 +129,8 @@
     </nav>
   </div>
 
-  <h1>Two tokens in a box, <i>priced by their ratio.</i></h1>
-  <p class="lede">A constant-product pool. Whatever's in it sets the price, and every trade moves it. No order book, no market maker — just arithmetic and whoever put liquidity in.</p>
+  <h1>Buy SWIPE, or <i>sell it back.</i></h1>
+  <p class="lede">A constant-product pool — whatever's in it sets the price, and every trade moves it. No order book and no market maker, just arithmetic and whoever put liquidity in. Merchants earn SWIPE by processing; everyone else buys it here.</p>
 
   <!-- SIGNATURE -->
   <section class="pool">
@@ -157,7 +157,7 @@
 
   <section class="card">
     <div class="tabs">
-      <div class="tab on" id="tSwap">Swap</div>
+      <div class="tab on" id="tSwap">Buy &amp; sell</div>
       <div class="tab" id="tAdd">Add liquidity</div>
       <div class="tab" id="tRem">Remove</div>
     </div>
@@ -165,10 +165,10 @@
     <!-- SWAP -->
     <div id="paneSwap">
       <div class="two" style="margin-bottom:12px">
+        <button id="dirB" class="ghost">Buy SWIPE</button>
         <button id="dirA" class="ghost">Sell SWIPE</button>
-        <button id="dirB" class="ghost">Sell USDC</button>
       </div>
-      <label for="swAmt" id="swLabel">Amount to sell</label>
+      <label for="swAmt" id="swLabel">USDC to spend</label>
       <input id="swAmt" placeholder="100" inputmode="decimal" autocomplete="off">
       <div class="quote" id="swQuote">Enter an amount.</div>
       <div class="impact hidden" id="swImpactWrap">
@@ -274,7 +274,7 @@ let wp=null;
 const readers=()=>wp?[wp,...pool]:pool;
 async function rd(addr,abi,fn){ let e; for(const p of readers()){ try{ return await fn(new ethers.Contract(addr,abi,p)); }catch(x){e=x;} } throw e; }
 
-let signer=null,me=null,P=null,sw0=true,tab="swap";
+let signer=null,me=null,P=null,sw0=false,tab="swap";   // false = buying SWIPE
 let balA=0n,balB=0n,balLp=0n,alA=0n,alB=0n;
 /* Token order is decided by the contract, not by us — it sorts by address.
    Everything below works in "A = SWIPE, B = USDC" terms and maps at the edge. */
@@ -365,9 +365,11 @@ $("tRem").onclick=()=>setTab("rem");
 $("dirA").onclick=()=>{ sw0=true; setDir(); };
 $("dirB").onclick=()=>{ sw0=false; setDir(); };
 function setDir(){
+  // sw0 true means selling SWIPE for USDC; false means buying SWIPE with USDC.
   $("dirA").className = sw0 ? "" : "ghost";
   $("dirB").className = sw0 ? "ghost" : "";
-  $("swLabel").textContent = sw0 ? "SWIPE to sell" : "USDC to sell";
+  $("swLabel").textContent = sw0 ? "SWIPE to sell" : "USDC to spend";
+  $("swapBtn").textContent = sw0 ? "Sell" : "Buy";
   quoteSwap();
 }
 setDir();
@@ -382,7 +384,7 @@ async function quoteSwap(){
   }
   if(P.rSwipe===0n||P.rUsdc===0n){
     $("swQuote").className="quote hot";
-    $("swQuote").textContent="The pool is empty — there's nothing to trade against. Add liquidity first.";
+    $("swQuote").textContent="Nothing to buy yet — the pool has no liquidity in it. Somebody has to add both sides before anyone can trade.";
     $("swapBtn").disabled=true; return;
   }
   let amt; try{ amt = sw0 ? p18(v) : p6(v); }catch{ return; }
@@ -400,8 +402,12 @@ async function quoteSwap(){
     const outStr = sw0 ? f6(out)+" USDC" : f18(out)+" SWIPE";
     const feeStr = sw0 ? f18(fee)+" SWIPE" : f6(fee)+" USDC";
     const hot = imp>=5;
+    const each = sw0
+      ? (Number(ethers.formatUnits(out,6))/Number(v))
+      : (Number(v)/Number(ethers.formatUnits(out,18)));
     $("swQuote").className="quote"+(hot?" hot":"");
-    $("swQuote").innerHTML="You'd receive <b>"+outStr+"</b>, after a <b>"+feeStr+"</b> fee to the liquidity providers."+
+    $("swQuote").innerHTML=(sw0?"You'd receive <b>":"You'd get <b>")+outStr+"</b> at <b>"+
+      each.toLocaleString("en-US",{maximumFractionDigits:6})+" USDC</b> each, after a "+feeStr+" fee to the liquidity providers."+
       (hot?" That's a big trade for this pool — the price moves against you as it fills.":"");
     $("swImpactWrap").classList.remove("hidden");
     const bar=$("swImpact");
@@ -410,8 +416,9 @@ async function quoteSwap(){
     $("swImpactPct").textContent=imp.toFixed(2)+"% impact";
     $("swImpactPct").style.color = imp>=5?"var(--warn)":imp>=1?"var(--lock)":"var(--dim)";
     $("swapBtn").disabled=!signer;
+    const verb = sw0 ? "Sell" : "Buy";
     $("swapBtn").textContent = !signer ? "Connect wallet"
-      : ((sw0?alA:alB)<amt ? "Approve, then swap" : "Swap");
+      : ((sw0?alA:alB)<amt ? "Approve, then "+verb.toLowerCase() : verb+" SWIPE");
   }catch(e){ console.error(e); }
 }
 $("swAmt").addEventListener("input",quoteSwap);
@@ -541,7 +548,8 @@ $("swapBtn").onclick=async()=>{
     await (await c.swap(zfo,amt,minOut,me,DL())).wait();
     $("swAmt").value="";
     await loadBalances(); await loadPool();
-    $("swWhy").textContent="Swapped."; $("swWhy").className="why ok";
+    $("swWhy").textContent = sw0 ? "Sold. USDC is in your wallet." : "Bought. SWIPE is in your wallet — stake it to earn a cut of the fees.";
+    $("swWhy").className="why ok";
   }catch(e){ $("swWhy").textContent=why(e); $("swWhy").className="why warn"; }
   finally{ b.disabled=false; quoteSwap(); }
 };
