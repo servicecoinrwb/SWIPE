@@ -115,8 +115,8 @@
     </nav>
   </div>
 
-  <h1>The fees don't go to a company.</h1>
-  <p class="lede">Merchants earn esSWIPE by processing payments — one per dollar. Stake it and you receive a share of every fee the network collects, in USDC. Nothing is minted to pay you; the yield is money that actually came in, or it's nothing.</p>
+  <h1>Nobody was allocated any of this.</h1>
+  <p class="lede">Supply started at zero. Every SWIPE that exists was minted by a merchant processing a payment — one per dollar. Stake it and you earn two things from every fee that follows: the USDC itself, and esSWIPE emissions. There is no treasury, no premine, and no function that would let anyone create a unit any other way.</p>
 
   <!-- SIGNATURE: the claim -->
   <section class="claim">
@@ -137,13 +137,16 @@
         </div>
       </div>
 
-      <button id="claimBtn" class="hidden" style="margin-top:18px">Claim</button>
+      <div class="two" style="margin-top:18px">
+        <button id="claimBtn" class="hidden">Claim</button>
+        <button id="claimEscBtn" class="hidden lock">Claim esSWIPE</button>
+      </div>
       <p class="why" id="claimWhy"></p>
     </div>
     <dl class="stats">
       <div><dt>Fees collected</dt><dd id="sFees">—</dd></div>
       <div><dt>Total staked</dt><dd id="sStaked">—</dd></div>
-      <div><dt>Earned by use</dt><dd id="sEarned">—</dd></div>
+      <div><dt>Minted by volume</dt><dd id="sEarned">—</dd></div>
       <div><dt>Your slice</dt><dd id="sMine">—</dd></div>
     </dl>
   </section>
@@ -163,7 +166,7 @@
 
   <section class="card hidden" id="stakePanel">
     <h2>Stake</h2>
-    <p class="how">Staked SWIPE earns a share of every fee deposited after you stake. Fees that arrived earlier aren't yours — that's the whole reason this is fair.</p>
+    <p class="how">Staked SWIPE earns USDC fees and esSWIPE emissions from every payment after you stake. Payments that happened earlier aren't yours — your starting point is set the moment you stake, which is the whole reason this is fair.</p>
     <label for="stAmt">Amount</label>
     <input id="stAmt" placeholder="1000" inputmode="decimal" autocomplete="off">
     <div class="two">
@@ -186,27 +189,13 @@
     <p class="why" id="vestWhy"></p>
   </section>
 
-  <section class="card hidden" id="issuePanel">
-    <h2>Issue <span class="tag">Operator</span></h2>
-    <p class="how">Visible because you deployed this. Merchants now earn esSWIPE automatically through the rail, so manual issuance is for bootstrapping rather than distribution — anything minted here is supply nobody worked for.</p>
-    <div class="two">
-      <div><label for="iTo">To</label><input id="iTo" placeholder="0x…" autocomplete="off"></div>
-      <div><label for="iAmt">Amount</label><input id="iAmt" placeholder="10000" inputmode="decimal" autocomplete="off"></div>
-    </div>
-    <div class="two">
-      <button id="issueBtn">Issue SWIPE</button>
-      <button id="issueEsBtn" class="lock">Issue esSWIPE</button>
-    </div>
-    <p class="why" id="issueWhy"></p>
-  </section>
-
   <p class="note">
-    Interchange <a href="https://testnet.arcscan.app/address/0x5A1b6CD6b967dACc11420Df71300Fd4BeBFECcD5" target="_blank" rel="noopener">0x5A1b…CcD5</a> ·
+    Interchange <a href="https://testnet.arcscan.app/address/0xebaAe1809B2F05183Eda97e85C9fbCD74a8E5116" target="_blank" rel="noopener">0xebaA…5116</a> ·
     fed by <a href="./terminal.html">Terminal</a><br>
     Arc Testnet · unaudited · play money only
   </p>
   <div class="disc">
-    Staking yield here is a share of fees that were actually paid in. If no payments happen, there is no yield — this contract cannot mint rewards and will not pretend to. esSWIPE is minted to merchants by the payment rail at a fixed rate; that authorisation was set once and cannot be moved or revoked.
+    Emissions track fees rather than a clock. A month with no payments emits nothing, because nothing was earned — there is no schedule to front-run and no way for supply to grow without someone having paid for something. After the rail was named, this contract has no owner at all.
   </div>
 </div>
 
@@ -214,16 +203,15 @@
 const NET={ label:"Arc Testnet", chainId:5042002,
   rpcs:["https://rpc.blockdaemon.testnet.arc.network","https://arc-testnet.drpc.org","https://rpc.quicknode.testnet.arc.network","https://5042002.rpc.thirdweb.com","https://rpc.testnet.arc.network","https://rpc.testnet.arc.io"],
   explorer:"https://testnet.arcscan.app",
-  interchange:"0x5A1b6CD6b967dACc11420Df71300Fd4BeBFECcD5" };
+  interchange:"0xebaAe1809B2F05183Eda97e85C9fbCD74a8E5116" };
 const IC=NET.interchange, RPCS=NET.rpcs, CHAIN=NET.chainId;
 
 const ABI=[
-  "function positionOf(address) view returns (tuple(uint256 balance,uint256 staked,uint256 reserved,uint256 freeToUnstake,uint256 escrow,uint256 vesting,uint256 vestPerDay,uint256 pendingFees,uint256 shareOfPoolPpm))",
-  "function book() view returns (tuple(uint256 supply,uint256 escrowSupply,uint256 totalStaked,uint256 totalVesting,uint256 feesReceived,uint256 feesPaid,uint256 banked,uint256 stakedPct,uint256 earnedTotal,address terminal,bool closed))",
-  "function issuer() view returns (address)",
+  "function positionOf(address) view returns (tuple(uint256 balance,uint256 staked,uint256 reserved,uint256 freeToUnstake,uint256 escrow,uint256 vesting,uint256 vestPerDay,uint256 pendingFees,uint256 pendingEscrow,uint256 shareOfPoolPpm))",
+  "function book() view returns (tuple(uint256 supply,uint256 escrowSupply,uint256 totalStaked,uint256 totalVesting,uint256 feesReceived,uint256 feesPaid,uint256 volumeProcessed,uint256 mintedToMerchants,uint256 emittedToStakers,uint256 stakedPct,address terminal))",
   "function stake(uint256)","function unstake(uint256)","function claimFees() returns (uint256)",
+  "function claimEscrow() returns (uint256)",
   "function vest(uint256)","function cancelVest() returns (uint256)","function settleVesting(address)",
-  "function issue(address,uint256,bool)",
   "error ZeroAmount()","error ZeroAddress()","error NotIssuer()","error IssuanceClosed()",
   "error InsufficientBalance(uint256 have,uint256 want)","error InsufficientStake(uint256 have,uint256 want)",
   "error StakeReserved(uint256 free,uint256 want)","error InsufficientEscrow(uint256 have,uint256 want)",
@@ -243,7 +231,7 @@ let wp=null;
 const readers=()=>wp?[wp,...pool]:pool;
 async function rd(fn){ let e; for(const p of readers()){ try{ return await fn(new ethers.Contract(IC,ABI,p)); }catch(x){e=x;} } throw e; }
 
-let signer=null,me=null,pos=null,bk=null,issuer=null;
+let signer=null,me=null,pos=null,bk=null;
 
 /* ---------------- read ---------------- */
 async function loadBook(){
@@ -251,7 +239,7 @@ async function loadBook(){
     bk=await rd(c=>c.book());
     $("sFees").textContent=u6(bk.feesReceived);
     $("sStaked").textContent=t18(bk.totalStaked);
-    $("sEarned").textContent=t18(bk.earnedTotal);
+    $("sEarned").textContent=t18(bk.mintedToMerchants);
   }catch(e){ console.error(e); }
 }
 
@@ -260,7 +248,7 @@ async function loadPos(){
   try{
     const p=await rd(c=>c.positionOf(me));
     pos={balance:p[0],staked:p[1],reserved:p[2],free:p[3],escrow:p[4],
-         vesting:p[5],vestPerDay:p[6],pending:p[7],ppm:Number(p[8])};
+         vesting:p[5],vestPerDay:p[6],pending:p[7],pendingEsc:p[8],ppm:Number(p[9])};
     render();
   }catch(e){ console.error(e); }
 }
@@ -272,6 +260,9 @@ function render(){
   $("claimOut").innerHTML=u6(pos.pending)+'<small>USDC</small>';
   $("claimBtn").classList.toggle("hidden",!has);
   if(has) $("claimBtn").textContent="Claim "+u6(pos.pending)+" USDC";
+  const hasEsc = pos.pendingEsc>0n;
+  $("claimEscBtn").classList.toggle("hidden",!hasEsc);
+  if(hasEsc) $("claimEscBtn").textContent="Claim "+t18(pos.pendingEsc)+" esSWIPE";
 
   $("sMine").textContent=(pos.ppm/10000).toFixed(2)+"%";
 
@@ -330,8 +321,6 @@ async function connect(silent){
     const bp=new ethers.BrowserProvider(window.ethereum);
     wp=bp; signer=await bp.getSigner(); me=await signer.getAddress();
     $("connectBtn").classList.add("hidden");
-    try{ issuer=await rd(c=>c.issuer());
-      if(issuer.toLowerCase()===me.toLowerCase()) $("issuePanel").classList.remove("hidden"); }catch(_){}
     await loadPos();
   }catch(e){
     if(!silent){ $("claimWhy").textContent="Wallet didn't connect: "+(e.shortMessage||e.message); $("claimWhy").className="why warn"; }
@@ -341,14 +330,13 @@ async function connect(silent){
 /* ---------------- write ---------------- */
 const ERRS={
   ZeroAmount:"Amount can't be zero.",
-  NotIssuer:"Only the issuer can do that.",
-  IssuanceClosed:"Issuance was closed permanently.",
+  NotTerminal:"Only the payment rail can mint. Nobody else has that permission, including whoever deployed this.",
   NothingToClaim:"Nothing to claim right now.",
   InsufficientBalance:"You don't hold that much SWIPE.",
   InsufficientStake:"You don't have that much staked.",
   StakeReserved:"That much is reserved against a conversion in progress and can't be unstaked until it finishes — or you cancel it.",
   InsufficientEscrow:"You don't hold that much esSWIPE.",
-  AboveCap:"That would go past the supply cap."
+  NotDeployer:"That action was only ever available once, at deployment."
 };
 function why(e){
   const m=e.shortMessage||e.message||"";
@@ -379,6 +367,13 @@ async function tx(fn,btn,label,after){
 $("claimBtn").onclick=async()=>{
   const err=await tx(c=>c.claimFees(),$("claimBtn"),"",()=>{
     $("claimWhy").textContent="Claimed. It's in your wallet."; $("claimWhy").className="why ok"; });
+  if(err){ $("claimWhy").textContent=err; $("claimWhy").className="why warn"; }
+};
+
+$("claimEscBtn").onclick=async()=>{
+  const err=await tx(c=>c.claimEscrow(),$("claimEscBtn"),"",()=>{
+    $("claimWhy").textContent="Claimed. It's escrowed — convert it below to make it real SWIPE.";
+    $("claimWhy").className="why ok"; });
   if(err){ $("claimWhy").textContent=err; $("claimWhy").className="why warn"; }
 };
 
@@ -438,19 +433,6 @@ $("cancelBtn").onclick=async()=>{
   if(err){ $("vestWhy").textContent=err; $("vestWhy").className="why warn"; }
 };
 
-async function doIssue(escrowed){
-  const b=escrowed?$("issueEsBtn"):$("issueBtn");
-  const to=$("iTo").value.trim()||me, v=$("iAmt").value.trim();
-  if(!ethers.isAddress(to)){ $("issueWhy").textContent="That address isn't valid."; $("issueWhy").className="why warn"; return; }
-  if(!v||isNaN(v)||Number(v)<=0){ $("issueWhy").textContent="Enter an amount."; $("issueWhy").className="why warn"; return; }
-  const err=await tx(c=>c.issue(to,p18(v),escrowed),b,"",()=>{
-    $("iAmt").value="";
-    $("issueWhy").textContent="Issued "+(escrowed?"esSWIPE — it can only leave by converting.":"SWIPE.");
-    $("issueWhy").className="why ok"; });
-  if(err){ $("issueWhy").textContent=err; $("issueWhy").className="why warn"; }
-}
-$("issueBtn").onclick=()=>doIssue(false);
-$("issueEsBtn").onclick=()=>doIssue(true);
 </script>
 </body>
 </html>
