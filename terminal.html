@@ -130,7 +130,7 @@
   </div>
 
   <h1>Take a payment. Keep 97.5% <i>and earn the rest back.</i></h1>
-  <p class="lede">Settles in the same transaction — not in two days. The 2.5% goes to stakers rather than a company, and you earn one esSWIPE for every dollar you process.</p>
+  <p class="lede">Settles in the same transaction — not in two days. The 2.5% goes to stakers rather than a company, and you're minted one SWIPE for every dollar you process. That's the only way the token is ever created.</p>
 
   <!-- SIGNATURE: the split -->
   <section class="split">
@@ -145,7 +145,7 @@
         <span>You receive <b id="netOut">97.50</b> instantly</span>
         <span><b id="feeOut">2.50</b> to the staking pool</span>
       </div>
-      <p class="earn" id="earnOut">and you earn <b>100.00 esSWIPE</b> — stake it to take a cut of everyone else's fees</p>
+      <p class="earn" id="earnOut">and you're minted <b>100.00 SWIPE</b> — stake it to take a cut of everyone else's fees</p>
       <p class="cmp" id="cmpOut"></p>
     </div>
     <dl class="stats">
@@ -166,7 +166,7 @@
         <div class="row"><dt>Received</dt><dd id="mRecv">—</dd></div>
         <div class="row"><dt>Fees paid</dt><dd id="mFees">—</dd></div>
         <div class="row"><dt>Payments taken</dt><dd id="mCount">—</dd></div>
-        <div class="row"><dt>esSWIPE earned</dt><dd id="mEarn">—</dd></div>
+        <div class="row"><dt>SWIPE minted</dt><dd id="mEarn">—</dd></div>
       </dl>
       <div class="link" id="payLink"></div>
       <div class="two" style="margin-top:12px">
@@ -202,12 +202,12 @@
   </section>
 
   <p class="note">
-    Terminal <a href="https://testnet.arcscan.app/address/0x8c875a187e4650B4a207Cd4d5049229E3c7c878f" target="_blank" rel="noopener">0x8c87…878f</a> ·
-    fees to <a href="https://testnet.arcscan.app/address/0x5A1b6CD6b967dACc11420Df71300Fd4BeBFECcD5" target="_blank" rel="noopener">Interchange</a><br>
+    Terminal <a href="https://testnet.arcscan.app/address/0xB21b0396896Caf29Ab9306F9eA958E6E805d967c" target="_blank" rel="noopener">0xB21b…967c</a> ·
+    fees to <a href="https://testnet.arcscan.app/address/0xebaAe1809B2F05183Eda97e85C9fbCD74a8E5116" target="_blank" rel="noopener">Interchange</a><br>
     Arc Testnet · unaudited · play money only
   </p>
   <div class="disc">
-    Earning is minted by the staking pool itself, and the rail's permission to mint was set once and can never be moved — so it's a rule rather than a policy. If it ever fails, the payment still settles and the skipped reward is recorded publicly.
+    SWIPE is minted by the staking pool, and this rail's permission to trigger that was set once at deployment and can never be moved or revoked. There is no other mint path — no premine, no treasury, no issuance function. Supply is exactly the volume that has been processed.
   </div>
   <div class="disc">
     No chargebacks, no disputes, no refunds this contract can enforce, no fraud screening and no compliance of any kind. A card network is mostly those things and only incidentally a way to move money — this is the moving-money part, which is the easy part.
@@ -218,13 +218,13 @@
 const NET={ label:"Arc Testnet", chainId:5042002,
   rpcs:["https://rpc.blockdaemon.testnet.arc.network","https://arc-testnet.drpc.org","https://rpc.quicknode.testnet.arc.network","https://5042002.rpc.thirdweb.com","https://rpc.testnet.arc.network","https://rpc.testnet.arc.io"],
   explorer:"https://testnet.arcscan.app",
-  terminal:"0x8c875a187e4650B4a207Cd4d5049229E3c7c878f",
+  terminal:"0xB21b0396896Caf29Ab9306F9eA958E6E805d967c",
   usdc:"0x3600000000000000000000000000000000000000" };
 const TM=NET.terminal, USDC=NET.usdc, RPCS=NET.rpcs, CHAIN=NET.chainId;
 const DEC=6n;
 
 const ABI=[
-  "function book() view returns (tuple(uint256 volume,uint256 feesRouted,uint256 payments,uint256 merchants,uint16 feeBps,address sink))",
+  "function book() view returns (tuple(uint256 volume,uint256 feesRouted,uint256 payments,uint256 merchants,uint256 rewarded,uint256 rewardsMissed,uint16 feeBps,address sink))",
   "function merchantOf(address) view returns (tuple(bool exists,bool closed,address payout,string name,uint256 received,uint256 feesPaid,uint32 payments,uint64 since))",
   "function quote(uint256) view returns (uint256 gross,uint256 net,uint256 fee,uint256 stripeWouldCost)",
   "function open(string,address)","function setPayout(address)","function close()",
@@ -284,7 +284,7 @@ async function quote(){
     $("netOut").textContent=f(q[1]);
     $("feeOut").textContent=f(q[2]);
     // one esSWIPE per unit of volume — the reward scale bridges 6dp to 18dp
-    $("earnOut").innerHTML="and you earn <b>"+f(q[0])+" esSWIPE</b> — stake it to take a cut of everyone else's fees";
+    $("earnOut").innerHTML="and you're minted <b>"+f(q[0])+" SWIPE</b> — stake it to take a cut of everyone else's fees";
     const save=q[3]-q[2];
     $("cmpOut").innerHTML = save>0n
       ? 'A card processor at 2.9% + 30¢ would take <b>'+f(q[3])+'</b> — you keep <span class="save">'+f(save)+' more</span>.'
@@ -323,7 +323,7 @@ function renderMerchant(){
   $("mCount").textContent=merch.payments;
   // volume in 6dp equals esSWIPE in 18dp at a 1:1 rate, so gross ≈ earned
   const gross = merch.received + merch.feesPaid;
-  $("mEarn").textContent = f(gross)+" esSWIPE";
+  $("mEarn").textContent = f(gross)+" SWIPE";
 
   const url=location.origin+location.pathname+"?to="+me;
   $("payLink").textContent=url;
