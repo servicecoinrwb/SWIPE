@@ -105,6 +105,41 @@
   .row dt{color:var(--dim);margin:0}
   .row dd{margin:0;font-family:"DM Mono",monospace;font-weight:500}
 
+  /* Fund modal — same shape as the MTYLD portal's: manual transfer first
+     because it always works, card last because it usually doesn't yet. */
+  .modal{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
+    background:rgba(11,15,20,.55);backdrop-filter:blur(3px);padding:20px}
+  .sheet{background:#fff;border-radius:18px;padding:24px;width:100%;max-width:400px;
+    max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.28)}
+  .sheet-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+  .sheet-top h3{font-size:18px;font-weight:800;letter-spacing:-.02em;margin:0}
+  .x{width:auto;background:none;color:var(--faint);font-size:22px;line-height:1;padding:0 4px;
+    box-shadow:none}
+  .x:hover{color:var(--ink);filter:none;background:none}
+  .opt-k{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 8px}
+  .opt{border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 18px;text-align:center}
+  .opt.off{opacity:.55;background:#fafbfc}
+  .opt-d{font-size:13.5px;color:var(--dim);margin:0 0 14px;text-align:left;line-height:1.55}
+  .opt-btn{display:block;width:100%;text-decoration:none;text-align:center;
+    font-family:"Plus Jakarta Sans",sans-serif;font-size:14px;font-weight:600;
+    padding:11px 16px;border-radius:9px;background:var(--brand);color:#fff;border:0;cursor:pointer}
+  .opt-btn:hover{filter:brightness(1.08)}
+  .opt-btn.ghost{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line-2)}
+  .opt-btn.ghost:hover{background:#f6f7f9;filter:none}
+  .qr{display:flex;justify-content:center;margin-bottom:12px}
+  .qr img,.qr canvas{border-radius:8px;background:#fff}
+  .addr{font-family:"DM Mono",monospace;font-size:11px;color:var(--dim);
+    word-break:break-all;margin:0 0 12px;line-height:1.6}
+  .opt-warn{font-family:"DM Mono",monospace;font-size:10.5px;line-height:1.6;color:var(--warn);
+    margin:12px 0 0;text-align:left}
+  .mp{display:flex;align-items:center;gap:12px;text-align:left}
+  .mp-i{width:34px;height:34px;border-radius:50%;background:#f0ecfa;color:#6b4bd6;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex:none}
+  .mp-n{font-size:14.5px;font-weight:600;margin:0}
+  .mp-s{font-size:12px;color:var(--dim);margin:2px 0 0;line-height:1.45}
+  .sheet-foot{font-family:"DM Mono",monospace;font-size:10.5px;color:var(--faint);
+    text-align:center;margin:4px 0 0;line-height:1.6}
   .note{font-family:"DM Mono",monospace;font-size:11px;line-height:1.75;color:var(--faint);
     margin-top:22px;text-align:center}
   .note a{color:var(--dim)}
@@ -219,6 +254,44 @@
     </dl>
     <p class="why" id="posWhy"></p>
   </section>
+
+  <!-- Fund modal -->
+  <div id="fundModal" class="modal hidden">
+    <div class="sheet">
+      <div class="sheet-top">
+        <h3>Fund this wallet</h3>
+        <button class="x" id="fundClose" aria-label="Close">&times;</button>
+      </div>
+
+      <p class="opt-k">Option 1 · Testnet faucet</p>
+      <div class="opt">
+        <p class="opt-d">Arc testnet USDC is free from Circle, one dollar a day. It doubles as the gas token, so it's the only thing this wallet needs.</p>
+        <a class="opt-btn" href="https://faucet.circle.com" target="_blank" rel="noopener">Open the faucet →</a>
+      </div>
+
+      <p class="opt-k">Option 2 · Send it yourself</p>
+      <div class="opt">
+        <div class="qr" id="fundQr"></div>
+        <p class="addr" id="fundAddr">—</p>
+        <button class="opt-btn ghost" id="fundCopy">Copy address</button>
+        <p class="opt-warn">Arc testnet only, chain 5042002. USDC sent from any other network will not arrive and cannot be recovered.</p>
+      </div>
+
+      <p class="opt-k">Option 3 · Card</p>
+      <div class="opt off">
+        <div class="mp">
+          <div class="mp-i">M</div>
+          <div>
+            <p class="mp-n">Buy with a card</p>
+            <p class="mp-s" id="mpNote">Not available on Arc yet — card providers support chains after mainnet launches.</p>
+          </div>
+        </div>
+      </div>
+
+      <p class="sheet-foot">Nothing here touches this site. The faucet is Circle's and a transfer is between you and your wallet.</p>
+    </div>
+  </div>
+
 
   <p class="note">
     Pool <a href="https://testnet.arcscan.app/address/0x074327EAB4D545240A83F2Af27c53Da060898cE6" target="_blank" rel="noopener">0x0743…8cE6</a> ·
@@ -396,7 +469,8 @@ async function quoteSwap(){
     $("swQuote").className="quote hot";
     $("swQuote").innerHTML="You hold <b>"+(sw0?f18(balA)+" SWIPE":f6(balB)+" USDC")+"</b> — less than that."+
       (sw0 ? " SWIPE is only minted by processing a payment, or bought here."
-           : ' Testnet USDC is free from <a href="https://faucet.circle.com" target="_blank" rel="noopener">Circle\'s faucet</a>.');
+           : ' <a id="fundLink2" href="#" style="font-weight:600">Fund this wallet →</a>');
+    const fl2=$("fundLink2"); if(fl2) fl2.onclick=(e)=>{ e.preventDefault(); openFund(); };
     $("swapBtn").disabled=true; return;
   }
   try{
@@ -504,6 +578,50 @@ async function connect(silent){
   }catch(e){
     if(!silent){ $("posWhy").textContent="Wallet didn't connect: "+(e.shortMessage||e.message); $("posWhy").className="why warn"; }
   }
+}
+
+/* ---------------- fund modal ----------------
+   Reachable from the "not enough USDC" message and from the account panel.
+   Ordered by what actually works today: faucet, then a plain transfer, then
+   a card slot that stays dark until a provider supports Arc. Flipping it on
+   later means setting MOONPAY to a URL and nothing else. */
+const MOONPAY = null;   // e.g. "https://buy.moonpay.com/?apiKey=…&currencyCode=usdc_arc&walletAddress="
+
+function openFund(){
+  if(!me){ connect(false); return; }
+  $("fundAddr").textContent=me;
+  drawQr(me);
+  if(MOONPAY){
+    const box=document.querySelector(".opt.off");
+    if(box){
+      box.classList.remove("off");
+      box.innerHTML='<a class="opt-btn" href="'+MOONPAY+me+'" target="_blank" rel="noopener">Buy USDC with a card →</a>'+
+        '<p class="opt-warn">Check the delivery address in their checkout matches the address above before paying.</p>';
+    }
+  }
+  $("fundModal").classList.remove("hidden");
+}
+function closeFund(){ $("fundModal").classList.add("hidden"); }
+$("fundClose").onclick=closeFund;
+$("fundModal").addEventListener("click",e=>{ if(e.target===$("fundModal")) closeFund(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeFund(); });
+
+$("fundCopy").onclick=()=>{
+  navigator.clipboard.writeText(me);
+  $("fundCopy").textContent="Copied";
+  setTimeout(()=>$("fundCopy").textContent="Copy address",1500);
+};
+
+/* A QR with no dependency — the library is loaded only when the modal is
+   first opened, so the page costs nothing to anyone who never funds. */
+function drawQr(text){
+  const box=$("fundQr");
+  box.innerHTML="";
+  const img=document.createElement("img");
+  img.width=168; img.height=168; img.alt="Wallet address QR";
+  img.src="https://api.qrserver.com/v1/create-qr-code/?size=168x168&margin=0&data="+encodeURIComponent(text);
+  img.onerror=()=>{ box.innerHTML='<p class="addr" style="margin:0">QR unavailable — copy the address below instead.</p>'; };
+  box.appendChild(img);
 }
 
 /* ---------------- write ---------------- */
