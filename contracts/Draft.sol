@@ -6,11 +6,18 @@ import {SafeERC20} from "@openzeppelin/contracts@5.0.2/token/ERC20/utils/SafeERC
 
 interface ITerminal {
     function pay(address merchant, uint256 amount, string calldata ref) external returns (uint256);
-    function merchantOf(address who) external view returns (
-        bool exists, bool closed, address payout, string memory name,
-        uint256 received, uint256 feesPaid, uint256 refunded,
-        uint32 payments, uint64 since
-    );
+
+    /// @dev Declared as a struct, not as nine flat returns. Those look
+    ///      interchangeable and are not: a struct containing a dynamic
+    ///      member is encoded as a dynamic tuple, which carries an extra
+    ///      offset word that flat returns do not. Getting this wrong makes
+    ///      every read revert with no reason data attached.
+    struct MerchantView {
+        bool exists; bool closed; address payout; string name;
+        uint256 received; uint256 feesPaid; uint256 refunded;
+        uint32 payments; uint64 since;
+    }
+    function merchantOf(address who) external view returns (MerchantView memory);
 }
 
 /**
@@ -161,9 +168,9 @@ contract Draft {
         // A draft naming a merchant who can't receive is a draft that can
         // never be spent, so it is refused at issue rather than discovered
         // later by whoever was relying on it.
-        (bool exists, bool closed, , , , , , , ) = terminal.merchantOf(merchant);
-        if (!exists) revert MerchantNotOnRail();
-        if (closed) revert MerchantNotAccepting();
+        ITerminal.MerchantView memory mv = terminal.merchantOf(merchant);
+        if (!mv.exists) revert MerchantNotOnRail();
+        if (mv.closed) revert MerchantNotAccepting();
 
         id = _notes.length;
         _notes.push(Note({
