@@ -105,8 +105,8 @@
   </div>
 
   <h1>Somebody takes 2.9% of every card payment. <i>It doesn't have to be a company.</i></h1>
-  <p class="lede">A processor charges a fee to run a network. That part is fair. What isn't obvious is why the fee should become profit for a corporation rather than going back to the people using the thing.</p>
-  <p class="lede"><b>Here it doesn't.</b> Every fee is distributed to whoever staked, in the same transaction it was collected.</p>
+  <p class="lede">A processor charges a fee to run a network. That part is fair. What isn't obvious is why the fee should become profit for a corporation rather than going back to the people who generated it.</p>
+  <p class="lede"><b>Here it doesn't.</b> Every fee goes to stakers in the transaction it was collected — and the token they stake started at zero supply, with every unit minted by a merchant processing a payment. Nobody was allocated any, including whoever deployed it.</p>
 
   <!-- SIGNATURE: the flow -->
   <section class="flow">
@@ -128,8 +128,13 @@
     </div>
     <div class="step">
       <div class="dot gold">4</div>
-      <div><b>The merchant earns <span class="amt">100 esSWIPE</span></b>
-        <span>One per dollar processed, minted by the pool rather than handed out. The rail's authorisation to mint was set once and can never be moved — so this is a rule, not a policy.</span></div>
+      <div><b>The merchant is minted <span class="amt">100 SWIPE</span></b>
+        <span>One per dollar processed. This is the only way supply is ever created — there is no premine, no treasury, and no issuance function for anyone to call.</span></div>
+    </div>
+    <div class="step">
+      <div class="dot gold">5</div>
+      <div><b>Stakers are emitted <span class="amt">2.50 esSWIPE</span></b>
+        <span>Alongside the USDC, at a fixed ratio to the fee. Emissions track payments rather than a clock, so a quiet month emits nothing and there is no schedule to front-run.</span></div>
     </div>
   </section>
 
@@ -162,7 +167,7 @@
     <div class="side g">
       <p class="k">Holders</p>
       <h3>Take the fees</h3>
-      <p>Merchants earn esSWIPE by processing. Stake it and receive a share of every fee the network collects, in USDC — nothing is minted to pay you, the yield is money that actually came in.</p>
+      <p>Merchants are minted SWIPE by processing. Stake it and receive a share of every fee the network collects in USDC, plus esSWIPE emissions — nothing is minted to pay you, the yield is money that actually came in.</p>
       <a class="go g" href="./interchange.html">Stake</a>
     </div>
   </div>
@@ -172,20 +177,20 @@
     <p><b>It isn't a card network.</b> No chargebacks, no disputes, no fraud screening, no identity checks, no compliance. Those are most of what a processor really sells, and none of them are here. This is only the moving-money part, which is the easy part.</p>
     <p><b>The customer needs USDC.</b> That's the real adoption problem and no amount of contract design solves it. Until someone can pay from a card and have it arrive as stablecoin, this is for people who already hold it.</p>
     <p><b>Percentage pricing breaks on large tickets.</b> 2.5% of a $38,000 equipment job is $950 to move a wire, which is indefensible however it compares to a card network. The rate is immutable, so the honest fix is a second deployment at a lower rate rather than an operator who can change the price.</p>
-    <p><b>The token still isn't a fair launch.</b> Merchants now earn esSWIPE automatically — one per dollar processed, minted by the pool itself, with the authorisation permanently fixed. But the operator can also still issue by hand, so the supply isn't purely earned. Watch <code>earnedTotal</code> against total supply if you want to know how much of it was worked for.</p>
+    <p><b>Nobody has been paid to use it.</b> Supply starts at zero and only a payment mints any, which is the honest version — but it also means there is no marketing budget, no liquidity incentive, and no reason for anyone to show up first. Bootstrapping a two-sided network with no subsidy is genuinely hard, and this makes no attempt to pretend otherwise.</p>
     <p><b>Unaudited, on a testnet.</b> The fee accounting is verified against a simulation of 20,000 randomized staking pools with no pool ever paying out more than it took in — a bug the first version had. That is not a professional review.</p>
   </div>
 
   <footer>
-    Terminal <a href="https://testnet.arcscan.app/address/0x8c875a187e4650B4a207Cd4d5049229E3c7c878f" target="_blank" rel="noopener">0x8c87…878f</a> ·
-    Interchange <a href="https://testnet.arcscan.app/address/0x5A1b6CD6b967dACc11420Df71300Fd4BeBFECcD5" target="_blank" rel="noopener">0x5A1b…CcD5</a><br>
+    Terminal <a href="https://testnet.arcscan.app/address/0xB21b0396896Caf29Ab9306F9eA958E6E805d967c" target="_blank" rel="noopener">0xB21b…967c</a> ·
+    Interchange <a href="https://testnet.arcscan.app/address/0xebaAe1809B2F05183Eda97e85C9fbCD74a8E5116" target="_blank" rel="noopener">0xebaA…5116</a><br>
     Arc Testnet, chain 5042002 — both verified onchain, read the source before you trust the page.
   </footer>
 </div>
 
 <script>
 const RPCS=["https://rpc.blockdaemon.testnet.arc.network","https://arc-testnet.drpc.org","https://rpc.quicknode.testnet.arc.network","https://5042002.rpc.thirdweb.com","https://rpc.testnet.arc.network","https://rpc.testnet.arc.io"];
-const TM="0x8c875a187e4650B4a207Cd4d5049229E3c7c878f";
+const TM="0xB21b0396896Caf29Ab9306F9eA958E6E805d967c";
 const pool=RPCS.map(u=>new ethers.JsonRpcProvider(u));
 const $=id=>document.getElementById(id);
 const u6=v=>Number(ethers.formatUnits(v,6)).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -197,10 +202,10 @@ const u6=v=>Number(ethers.formatUnits(v,6)).toLocaleString("en-US",{minimumFract
       $("sVol").textContent=u6(b.volume);
       $("sFees").textContent=u6(b.feesRouted);
       $("sMerch").textContent=b.merchants.toString();
-      const earned=Number(ethers.formatUnits(b.rewarded,18));
-      $("earnLine").textContent = earned>0
-        ? earned.toLocaleString("en-US",{maximumFractionDigits:2})+" esSWIPE earned by merchants so far — one per dollar processed."
-        : "No volume yet, so nothing earned. Merchants mint one esSWIPE per dollar they process.";
+      const minted=Number(ethers.formatUnits(b.rewarded,18));
+      $("earnLine").textContent = minted>0
+        ? minted.toLocaleString("en-US",{maximumFractionDigits:2})+" SWIPE minted so far — every unit of it by a merchant processing a payment."
+        : "Supply is zero. It stays zero until somebody processes a payment, because there is no other way to create any.";
       return;
     }catch(e){}
   }
