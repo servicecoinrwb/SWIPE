@@ -116,7 +116,7 @@
   </div>
 
   <h1>The fees don't go to a company.</h1>
-  <p class="lede">Stake SWIPE and you receive a share of every payment fee the network collects, in USDC. Nothing is minted to pay you — the yield is money that actually came in, or it's nothing.</p>
+  <p class="lede">Merchants earn esSWIPE by processing payments — one per dollar. Stake it and you receive a share of every fee the network collects, in USDC. Nothing is minted to pay you; the yield is money that actually came in, or it's nothing.</p>
 
   <!-- SIGNATURE: the claim -->
   <section class="claim">
@@ -143,7 +143,7 @@
     <dl class="stats">
       <div><dt>Fees collected</dt><dd id="sFees">—</dd></div>
       <div><dt>Total staked</dt><dd id="sStaked">—</dd></div>
-      <div><dt>Of supply</dt><dd id="sPct">—</dd></div>
+      <div><dt>Earned by use</dt><dd id="sEarned">—</dd></div>
       <div><dt>Your slice</dt><dd id="sMine">—</dd></div>
     </dl>
   </section>
@@ -188,7 +188,7 @@
 
   <section class="card hidden" id="issuePanel">
     <h2>Issue <span class="tag">Operator</span></h2>
-    <p class="how">Visible because you deployed this. Issuance is manual today — nothing earns SWIPE automatically, which the guide says plainly rather than implying otherwise.</p>
+    <p class="how">Visible because you deployed this. Merchants now earn esSWIPE automatically through the rail, so manual issuance is for bootstrapping rather than distribution — anything minted here is supply nobody worked for.</p>
     <div class="two">
       <div><label for="iTo">To</label><input id="iTo" placeholder="0x…" autocomplete="off"></div>
       <div><label for="iAmt">Amount</label><input id="iAmt" placeholder="10000" inputmode="decimal" autocomplete="off"></div>
@@ -201,12 +201,12 @@
   </section>
 
   <p class="note">
-    Interchange <a href="https://testnet.arcscan.app/address/0xa551b604bf2BEd9D52cA80e5602836B67403b98E" target="_blank" rel="noopener">0xa551…b98E</a> ·
+    Interchange <a href="https://testnet.arcscan.app/address/0x5A1b6CD6b967dACc11420Df71300Fd4BeBFECcD5" target="_blank" rel="noopener">0x5A1b…CcD5</a> ·
     fed by <a href="./terminal.html">Terminal</a><br>
     Arc Testnet · unaudited · play money only
   </p>
   <div class="disc">
-    Staking yield here is a share of fees that were actually paid in. If no payments happen, there is no yield — this contract cannot mint rewards and will not pretend to.
+    Staking yield here is a share of fees that were actually paid in. If no payments happen, there is no yield — this contract cannot mint rewards and will not pretend to. esSWIPE is minted to merchants by the payment rail at a fixed rate; that authorisation was set once and cannot be moved or revoked.
   </div>
 </div>
 
@@ -214,12 +214,12 @@
 const NET={ label:"Arc Testnet", chainId:5042002,
   rpcs:["https://rpc.blockdaemon.testnet.arc.network","https://arc-testnet.drpc.org","https://rpc.quicknode.testnet.arc.network","https://5042002.rpc.thirdweb.com","https://rpc.testnet.arc.network","https://rpc.testnet.arc.io"],
   explorer:"https://testnet.arcscan.app",
-  interchange:"0xa551b604bf2BEd9D52cA80e5602836B67403b98E" };
+  interchange:"0x5A1b6CD6b967dACc11420Df71300Fd4BeBFECcD5" };
 const IC=NET.interchange, RPCS=NET.rpcs, CHAIN=NET.chainId;
 
 const ABI=[
   "function positionOf(address) view returns (tuple(uint256 balance,uint256 staked,uint256 reserved,uint256 freeToUnstake,uint256 escrow,uint256 vesting,uint256 vestPerDay,uint256 pendingFees,uint256 shareOfPoolPpm))",
-  "function book() view returns (tuple(uint256 supply,uint256 escrowSupply,uint256 totalStaked,uint256 totalVesting,uint256 feesReceived,uint256 feesPaid,uint256 banked,uint256 stakedPct,bool closed))",
+  "function book() view returns (tuple(uint256 supply,uint256 escrowSupply,uint256 totalStaked,uint256 totalVesting,uint256 feesReceived,uint256 feesPaid,uint256 banked,uint256 stakedPct,uint256 earnedTotal,address terminal,bool closed))",
   "function issuer() view returns (address)",
   "function stake(uint256)","function unstake(uint256)","function claimFees() returns (uint256)",
   "function vest(uint256)","function cancelVest() returns (uint256)","function settleVesting(address)",
@@ -251,7 +251,7 @@ async function loadBook(){
     bk=await rd(c=>c.book());
     $("sFees").textContent=u6(bk.feesReceived);
     $("sStaked").textContent=t18(bk.totalStaked);
-    $("sPct").textContent=(Number(bk.stakedPct)/100).toFixed(1)+"%";
+    $("sEarned").textContent=t18(bk.earnedTotal);
   }catch(e){ console.error(e); }
 }
 
