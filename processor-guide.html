@@ -95,8 +95,9 @@
     </nav>
   </div>
 
-  <h1>Two contracts, and the second one <i>can't be pointed anywhere else.</i></h1>
-  <p class="lede">Terminal takes payments and skims 2.5%. Interchange holds stakes and hands out whatever Terminal sends it. The address Terminal sends to was fixed when it was deployed and has no setter — which is the difference between "the fee goes to stakers" and "the fee goes wherever the operator later decides."</p>
+  <h1>Two contracts, and after deployment <i>nobody owns either of them.</i></h1>
+  <p class="lede">Terminal takes payments and skims 2.5%. Interchange mints the token, shares the fee, and holds the stakes. The address Terminal pays into was fixed at deployment with no setter — which is the difference between "the fee goes to stakers" and "the fee goes wherever the operator later decides."</p>
+  <p class="lede">One privileged action existed: naming the rail. It was used once and can never be used again. There is no owner after that.</p>
 
   <h2>What happens in one payment</h2>
   <p>A single transaction, three movements, no balance left behind.</p>
@@ -108,7 +109,7 @@
   </table>
 
   <h2>How a stake earns</h2>
-  <p>There is one number doing all the work: <code>accFeePerShare</code>. When a fee arrives it rises by the fee divided by the total staked. Your claim is the difference between that number now and what it was when you last touched your stake.</p>
+  <p>Two numbers do all the work: <code>accFeePerShare</code> and <code>accEscPerShare</code>. When a payment lands, each rises by its share divided by the total staked. Your claim is the difference between those numbers now and what they were when you last touched your stake.</p>
   <p>Which means the thing people always worry about can't happen: <b>staking after a fee arrives earns you nothing from it.</b> Your starting point is set at the moment you stake, so you only ever collect from fees that came in after you did.</p>
   <p>Fees that arrive when nobody is staked would have no denominator to divide by, so they're banked and released into the pool the moment someone stakes. Nothing is stranded.</p>
 
@@ -141,28 +142,30 @@
     <p>Topping up mid-way never delays what you were already converting. Add more at month six and the original finishes on its original schedule while the new amount runs its own.</p>
   </div>
 
-  <h2>How a merchant earns</h2>
-  <p>Every payment mints the merchant <b>one esSWIPE per dollar of volume</b> — process a hundred, earn a hundred. The pool mints it, not the operator, and the rail's permission to do so was set once at deployment with no way to change or revoke it.</p>
-  <p>That distinction is the whole reason to bother. An operator who <i>chooses</i> to reward merchants can stop choosing. A contract that mints on a rule cannot.</p>
+  <h2>Where the supply comes from</h2>
+  <p>Zero at genesis. Not a small premine, not a treasury allocation, not a founder tranche vesting over eighteen months — zero. Every SWIPE that will ever exist is minted by a payment being processed, and no function exists that would let anyone create one another way.</p>
+  <p>A merchant is minted <b>one SWIPE per dollar of volume</b>. Stakers are emitted <b>esSWIPE at a fixed ratio to the fee</b>, alongside the USDC. That's the entire monetary policy, and it can't be changed by anyone including whoever deployed it.</p>
   <div class="fig">
     <p class="fig-lab">A $2,450 invoice</p>
     <table style="margin:0">
       <tr><td>Merchant receives</td><td>2,388.75 USDC, immediately</td></tr>
       <tr><td>Stakers receive</td><td>61.25 USDC, immediately</td></tr>
-      <tr><td>Merchant earns</td><td>2,450 esSWIPE, converting to real SWIPE over a year</td></tr>
+      <tr><td>Merchant is minted</td><td>2,450 SWIPE, immediately and unrestricted</td></tr>
+      <tr><td>Stakers are emitted</td><td>61.25 esSWIPE, pro-rata, converting over a year</td></tr>
     </table>
-    <p>Which means a merchant who stakes what they earn eventually collects part of everyone else's fees — including their own. Process enough and the effective rate falls below 2.5%.</p>
+    <p>Which means a merchant who stakes what they were minted eventually collects part of everyone else's fees — including their own. Process enough and the effective rate falls below 2.5%.</p>
   </div>
-  <p><b>Earning can never break a payment.</b> The mint is wrapped so that if it fails for any reason — a supply cap reached, a pool that stopped accepting — the payment still settles, the reward is skipped, and the skip is recorded publicly in <code>rewardsMissed</code>. A reward system that silently stops is worse than one that says it stopped.</p>
+  <h2>Why emissions track fees instead of time</h2>
+  <p>Most staking tokens emit on a clock — so much per block, forever, whether or not the thing is used. That pays people to hold during silence, and supply grows fastest exactly when it's least deserved.</p>
+  <p>Here emissions are a multiple of fees collected. <b>A month with no payments emits nothing.</b> There is no schedule to front-run, no cliff, and no way for supply to grow without somebody having actually paid for something.</p>
 
   <h2>What the operator can and can't do</h2>
   <table>
     <tr><th>Can</th><th>Cannot</th></tr>
-    <tr><td>Issue SWIPE and esSWIPE to anyone</td><td>Change the fee rate — it's immutable</td></tr>
-    <tr><td>Close their own issuance permanently</td><td>Redirect where fees go</td></tr>
-    <tr><td>Nothing about earning</td><td>Stop, change or revoke merchant earning — closing issuance ends discretionary minting but leaves the rule running</td></tr>
-    <tr><td>Open a merchant account like anyone else</td><td>Seize a stake, cancel someone's conversion, or touch the fee pool</td></tr>
-    <tr><td>Deploy a second Terminal at a different rate</td><td>Pause anything, or reverse a payment</td></tr>
+    <tr><td>Name the payment rail — once, at deployment</td><td>Mint a single token, ever</td></tr>
+    <tr><td>Open a merchant account like anyone else</td><td>Change the fee rate, the mint rate, or the emission rate</td></tr>
+    <tr><td>Deploy a second Terminal at a different rate</td><td>Redirect fees, seize a stake, or touch the pool</td></tr>
+    <tr><td>Nothing else</td><td>Pause anything, reverse a payment, or upgrade any of it</td></tr>
   </table>
 
   <h2>The bug the simulation caught</h2>
@@ -173,7 +176,7 @@
   <div class="plain">
     <p><b>Not a card network.</b> No chargebacks, disputes, refunds it can enforce, fraud screening, or compliance of any kind. Those are most of what a real processor sells.</p>
     <p><b>Not solving the hard problem.</b> The customer still needs USDC. That's the actual barrier and no contract design fixes it.</p>
-    <p><b>Still not a fair launch.</b> Merchants earn automatically now, but the operator can also mint by hand, so the supply is part earned and part granted. Compare <code>earnedTotal</code> against total supply to see the split — the contract publishes both rather than only the flattering one.</p>
+    <p><b>No subsidy, which cuts both ways.</b> Nothing was allocated to bootstrap this — no liquidity mining, no marketing allocation, no reason for anyone to be the first merchant. That makes the launch honest and makes adoption genuinely harder. Both things are true.</p>
     <p><b>Not audited.</b> Verified against simulations, which is not the same thing, and running on a testnet with play money.</p>
   </div>
 
@@ -182,8 +185,8 @@
   <a class="cta" href="./terminal.html">Accept a payment →</a>
 
   <footer>
-    Terminal <a href="https://testnet.arcscan.app/address/0x8c875a187e4650B4a207Cd4d5049229E3c7c878f" target="_blank" rel="noopener">0x8c87…878f</a> ·
-    Interchange <a href="https://testnet.arcscan.app/address/0x5A1b6CD6b967dACc11420Df71300Fd4BeBFECcD5" target="_blank" rel="noopener">0x5A1b…CcD5</a><br>
+    Terminal <a href="https://testnet.arcscan.app/address/0xB21b0396896Caf29Ab9306F9eA958E6E805d967c" target="_blank" rel="noopener">0xB21b…967c</a> ·
+    Interchange <a href="https://testnet.arcscan.app/address/0xebaAe1809B2F05183Eda97e85C9fbCD74a8E5116" target="_blank" rel="noopener">0xebaA…5116</a><br>
     Arc Testnet, chain 5042002
   </footer>
 </div>
