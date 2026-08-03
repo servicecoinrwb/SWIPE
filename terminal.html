@@ -103,6 +103,13 @@
   .row dt{color:var(--dim);margin:0}
   .row dd{margin:0;font-family:"DM Mono",monospace;font-weight:500}
 
+  .rc{padding:12px 0;border-top:1px solid var(--line)}
+  .rc:first-child{border-top:0}
+  .rc-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .rc-top b{font-family:"DM Mono",monospace;font-size:15px;font-weight:500}
+  .rc-top span{font-size:12.5px;color:var(--faint)}
+  .rc-sub{font-family:"DM Mono",monospace;font-size:11.5px;color:var(--dim);margin-top:3px}
+  button.sm{width:auto;font-size:12.5px;padding:7px 12px;margin-top:8px}
   .link{background:var(--brand-soft);border-radius:9px;padding:12px 14px;margin:12px 0 0;
     font-family:"DM Mono",monospace;font-size:11.5px;color:#0b5c50;word-break:break-all;line-height:1.6}
 
@@ -130,8 +137,8 @@
     </nav>
   </div>
 
-  <h1>Take a payment. Keep 97.5% <i>and earn the rest back.</i></h1>
-  <p class="lede">Settles in the same transaction — not in two days. The 2.5% goes to stakers rather than a company, and you're minted one SWIPE for every dollar you process. That's the only way the token is ever created.</p>
+  <h1>Take a payment. <i>Keep more of the big ones.</i></h1>
+  <p class="lede">2.5% on the first 500, 1% to 5,000, a quarter percent above — charged like tax brackets, so the rate falls as the ticket grows. Settles in the same transaction, and you're minted one SWIPE per dollar processed.</p>
 
   <!-- SIGNATURE: the split -->
   <section class="split">
@@ -167,6 +174,7 @@
         <div class="row"><dt>Received</dt><dd id="mRecv">—</dd></div>
         <div class="row"><dt>Fees paid</dt><dd id="mFees">—</dd></div>
         <div class="row"><dt>Payments taken</dt><dd id="mCount">—</dd></div>
+        <div class="row"><dt>Refunded</dt><dd id="mRef">—</dd></div>
         <div class="row"><dt>SWIPE minted</dt><dd id="mEarn">—</dd></div>
       </dl>
       <div class="link" id="payLink"></div>
@@ -189,6 +197,12 @@
     <p class="why" id="openWhy"></p>
   </section>
 
+  <section class="card hidden" id="receiptPanel">
+    <h2>Recent payments</h2>
+    <p class="how">Refunding sends money back to whoever paid it — not to an address you type — and burns the SWIPE minted for that sale. The fee isn't returned; it went to stakers when the payment landed.</p>
+    <div id="receipts"><p class="why">Loading…</p></div>
+  </section>
+
   <section class="card" id="payPanel">
     <h2 id="payTitle">Pay a merchant</h2>
     <p class="how" id="payHow">The amount shown is the amount charged. The fee comes out of it, not on top of it.</p>
@@ -203,8 +217,8 @@
   </section>
 
   <p class="note">
-    Terminal <a href="https://testnet.arcscan.app/address/0xB21b0396896Caf29Ab9306F9eA958E6E805d967c" target="_blank" rel="noopener">0xB21b…967c</a> ·
-    fees to <a href="https://testnet.arcscan.app/address/0xebaAe1809B2F05183Eda97e85C9fbCD74a8E5116" target="_blank" rel="noopener">Interchange</a><br>
+    Terminal <a href="https://testnet.arcscan.app/address/0xDBc6e2ACC9B739417412AD675ef0740E3fA224f9" target="_blank" rel="noopener">0xDBc6…24f9</a> ·
+    fees to <a href="https://testnet.arcscan.app/address/0x9B57a2cd9D721c0153851FB410D8f7948CB27F95" target="_blank" rel="noopener">Interchange</a><br>
     Arc Testnet · unaudited · play money only
   </p>
   <div class="disc">
@@ -219,15 +233,19 @@
 const NET={ label:"Arc Testnet", chainId:5042002,
   rpcs:["https://rpc.blockdaemon.testnet.arc.network","https://arc-testnet.drpc.org","https://rpc.quicknode.testnet.arc.network","https://5042002.rpc.thirdweb.com"],
   explorer:"https://testnet.arcscan.app",
-  terminal:"0xB21b0396896Caf29Ab9306F9eA958E6E805d967c",
+  terminal:"0xDBc6e2ACC9B739417412AD675ef0740E3fA224f9",
   usdc:"0x3600000000000000000000000000000000000000" };
 const TM=NET.terminal, USDC=NET.usdc, RPCS=NET.rpcs, CHAIN=NET.chainId;
 const DEC=6n;
 
 const ABI=[
-  "function book() view returns (tuple(uint256 volume,uint256 feesRouted,uint256 payments,uint256 merchants,uint16 feeBps,address sink))",
-  "function merchantOf(address) view returns (tuple(bool exists,bool closed,address payout,string name,uint256 received,uint256 feesPaid,uint32 payments,uint64 since))",
-  "function quote(uint256) view returns (uint256 gross,uint256 net,uint256 fee,uint256 stripeWouldCost)",
+  "function book() view returns (tuple(uint256 volume,uint256 feesRouted,uint256 refunded,uint256 payments,uint256 merchants,address sink))",
+  "function merchantOf(address) view returns (tuple(bool exists,bool closed,address payout,string name,uint256 received,uint256 feesPaid,uint256 refunded,uint32 payments,uint64 since))",
+  "function quote(uint256) view returns (uint256 gross,uint256 net,uint256 fee,uint256 effectiveBps,uint256 stripeWouldCost,uint256 mints)",
+  "function feeOn(uint256) pure returns (uint256)",
+  "function paymentsOf(address,uint256) view returns (uint256[])",
+  "function paymentOf(uint256) view returns (tuple(bool exists,address merchant,address payer,uint256 gross,uint256 fee,uint256 refunded,uint256 minted,uint256 refundable,uint64 at))",
+  "function refund(uint256,uint256)",
   "function open(string,address)","function setPayout(address)","function close()",
   "function pay(address,uint256,string)",
   "error ZeroAddress()","error ZeroAmount()","error NotRegistered()","error AlreadyRegistered()",
@@ -276,30 +294,85 @@ async function quote(){
   try{ amt = (v && !isNaN(v) && Number(v)>0) ? p6(v) : p6("100"); }catch{ amt=p6("100"); }
   try{
     const q=await rd(TM,ABI,c=>c.quote(amt));
-    const pct=Number(bk?bk.feeBps:250n)/100;
+    const effPct=Number(q[3])/100;
+    const barPct=Math.max(0.6,effPct);
     $("grossOut").innerHTML=f(q[0])+'<small>USDC</small>';
-    $("barM").style.width=(100-pct)+"%";
-    $("barF").style.width=pct+"%";
+    $("barM").style.width=(100-barPct)+"%";
+    $("barF").style.width=barPct+"%";
     $("barM").textContent=f(q[1])+" to you";
     $("barF").textContent=f(q[2]);
     $("netOut").textContent=f(q[1]);
-    $("feeOut").textContent=f(q[2]);
-    // one esSWIPE per unit of volume — the reward scale bridges 6dp to 18dp
-    $("earnOut").innerHTML="and you're minted <b>"+f(q[0])+" SWIPE</b> — stake it to take a cut of everyone else's fees";
-    const save=q[3]-q[2];
+    $("feeOut").textContent=f(q[2])+" ("+effPct.toFixed(2)+"%)";
+    $("earnOut").innerHTML = q[5]>0n
+      ? "and you're minted <b>"+f(q[5])+" SWIPE</b> — stake it to take a cut of everyone else's fees"
+      : "under 1.00 USDC, so this one mints nothing — a floor that stops supply being farmed a cent at a time";
+    const save=q[4]-q[2];
     $("cmpOut").innerHTML = save>0n
-      ? 'A card processor at 2.9% + 30¢ would take <b>'+f(q[3])+'</b> — you keep <span class="save">'+f(save)+' more</span>.'
-      : 'A card processor at 2.9% + 30¢ would take <b>'+f(q[3])+'</b>, which is less. Flat fees favour small tickets.';
+      ? 'The fee falls as the ticket grows — 2.5% on the first 500, 1% to 5,000, 0.25% above. A card at 2.9% + 30¢ would take <b>'+f(q[4])+'</b>, so you keep <span class="save">'+f(save)+' more</span>.'
+      : 'A card at 2.9% + 30¢ would take <b>'+f(q[4])+'</b>, which is less. Flat fees favour very small tickets.';
   }catch(e){ console.error(e); }
 }
 $("pAmt").addEventListener("input",()=>{ quote(); checkPay(); });
+
+async function loadReceipts(){
+  try{
+    const ids=await rd(TM,ABI,c=>c.paymentsOf(me,10));
+    if(!ids.length){ $("receipts").innerHTML='<p class="why">No payments yet.</p>'; return; }
+    const rows=[];
+    for(const i of ids){
+      const p=await rd(TM,ABI,c=>c.paymentOf(i));
+      if(!p.exists) continue;
+      const can = p.refundable>0n;
+      rows.push('<div class="rc"><div class="rc-top">'+
+        '<b>'+f(p.gross)+' USDC</b>'+
+        '<span>'+new Date(Number(p.at)*1000).toLocaleDateString()+' · from '+shortA(p.payer)+'</span></div>'+
+        '<div class="rc-sub">fee '+f(p.fee)+
+        (p.refunded>0n?' · refunded '+f(p.refunded):'')+
+        (can?'':' · fully refunded')+'</div>'+
+        (can?'<button class="ghost sm" data-r="'+i+'" data-max="'+p.refundable.toString()+'">Refund '+f(p.refundable)+'</button>':'')+
+        '</div>');
+    }
+    $("receipts").innerHTML=rows.join("");
+    $("receipts").querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>doRefund(b));
+  }catch(e){ console.error(e); }
+}
+
+let armR=null;
+async function doRefund(btn){
+  const id=Number(btn.dataset.r), max=BigInt(btn.dataset.max);
+  if(armR!==id){
+    armR=id;
+    const old=btn.textContent;
+    btn.textContent="Confirm — send "+f(max)+" back?";
+    $("acctWhy").textContent="Refunding sends "+f(max)+" USDC from your wallet to whoever paid it, and burns the SWIPE you were minted for that sale. The fee isn't returned — it went to stakers when the payment landed. Click again to confirm.";
+    $("acctWhy").className="why warn";
+    setTimeout(()=>{ if(armR===id){ armR=null; btn.textContent=old; } },6000);
+    return;
+  }
+  armR=null; btn.disabled=true; btn.textContent="Confirm…";
+  try{
+    if(allowance<max){
+      btn.textContent="Approve…";
+      const u=new ethers.Contract(USDC,USDC_ABI,signer);
+      await (await u.approve(TM,max)).wait(); allowance=max;
+    }
+    btn.textContent="Refunding…";
+    const c=new ethers.Contract(TM,ABI,signer);
+    await (await c.refund(id,max)).wait();
+    try{ bal=await rd(USDC,USDC_ABI,x=>x.balanceOf(me)); }catch(_){}
+    await loadBook(); await loadMerchant();
+    $("acctWhy").textContent="Refunded. The customer has it back."; $("acctWhy").className="why ok";
+  }catch(e){ $("acctWhy").textContent=why(e); $("acctWhy").className="why warn"; btn.disabled=false; }
+}
 
 async function loadMerchant(){
   if(!me) return;
   try{
     const m=await rd(TM,ABI,c=>c.merchantOf(me));
     merch = m.exists ? {closed:m.closed,payout:m.payout,name:m.name,received:m.received,
-                        feesPaid:m.feesPaid,payments:Number(m.payments),since:Number(m.since)} : null;
+                        feesPaid:m.feesPaid,refunded:m.refunded,
+                        payments:Number(m.payments),since:Number(m.since)} : null;
+    if(merch) await loadReceipts();
     renderMerchant();
   }catch(e){ console.error(e); }
 }
@@ -307,6 +380,7 @@ async function loadMerchant(){
 function renderMerchant(){
   $("openPanel").classList.toggle("hidden", !!merch);
   $("acctBody").classList.toggle("hidden", !merch);
+  $("receiptPanel").classList.toggle("hidden", !merch);
   if(!merch){
     $("acctHow").textContent = me
       ? "You don't have an account yet. Opening one takes a single transaction."
@@ -324,6 +398,7 @@ function renderMerchant(){
   $("mCount").textContent=merch.payments;
   // volume in 6dp equals esSWIPE in 18dp at a 1:1 rate, so gross ≈ earned
   const gross = merch.received + merch.feesPaid;
+  $("mRef").textContent = f(merch.refunded)+" USDC";
   $("mEarn").textContent = f(gross)+" SWIPE";
 
   const url=location.origin+location.pathname+"?to="+me;
@@ -393,6 +468,9 @@ const ERRS={
   AlreadyRegistered:"You already have an account.",
   MerchantClosed:"This merchant has stopped accepting payments.",
   BelowMinimum:"Below the 0.01 USDC minimum — under that the fee rounds to nothing.",
+  NoSuchPayment:"No payment with that number.",
+  NotThisMerchant:"That payment wasn't made to you.",
+  OverRefund:"That's more than is left unrefunded on that payment.",
   ZeroAmount:"Amount can't be zero.",
   ZeroAddress:"That address isn't valid."
 };
