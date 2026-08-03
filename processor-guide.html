@@ -141,11 +141,26 @@
     <p>Topping up mid-way never delays what you were already converting. Add more at month six and the original finishes on its original schedule while the new amount runs its own.</p>
   </div>
 
+  <h2>How a merchant earns</h2>
+  <p>Every payment mints the merchant <b>one esSWIPE per dollar of volume</b> — process a hundred, earn a hundred. The pool mints it, not the operator, and the rail's permission to do so was set once at deployment with no way to change or revoke it.</p>
+  <p>That distinction is the whole reason to bother. An operator who <i>chooses</i> to reward merchants can stop choosing. A contract that mints on a rule cannot.</p>
+  <div class="fig">
+    <p class="fig-lab">A $2,450 invoice</p>
+    <table style="margin:0">
+      <tr><td>Merchant receives</td><td>2,388.75 USDC, immediately</td></tr>
+      <tr><td>Stakers receive</td><td>61.25 USDC, immediately</td></tr>
+      <tr><td>Merchant earns</td><td>2,450 esSWIPE, converting to real SWIPE over a year</td></tr>
+    </table>
+    <p>Which means a merchant who stakes what they earn eventually collects part of everyone else's fees — including their own. Process enough and the effective rate falls below 2.5%.</p>
+  </div>
+  <p><b>Earning can never break a payment.</b> The mint is wrapped so that if it fails for any reason — a supply cap reached, a pool that stopped accepting — the payment still settles, the reward is skipped, and the skip is recorded publicly in <code>rewardsMissed</code>. A reward system that silently stops is worse than one that says it stopped.</p>
+
   <h2>What the operator can and can't do</h2>
   <table>
     <tr><th>Can</th><th>Cannot</th></tr>
     <tr><td>Issue SWIPE and esSWIPE to anyone</td><td>Change the fee rate — it's immutable</td></tr>
-    <tr><td>Close issuance permanently</td><td>Redirect where fees go</td></tr>
+    <tr><td>Close their own issuance permanently</td><td>Redirect where fees go</td></tr>
+    <tr><td>Nothing about earning</td><td>Stop, change or revoke merchant earning — closing issuance ends discretionary minting but leaves the rule running</td></tr>
     <tr><td>Open a merchant account like anyone else</td><td>Seize a stake, cancel someone's conversion, or touch the fee pool</td></tr>
     <tr><td>Deploy a second Terminal at a different rate</td><td>Pause anything, or reverse a payment</td></tr>
   </table>
@@ -158,7 +173,7 @@
   <div class="plain">
     <p><b>Not a card network.</b> No chargebacks, disputes, refunds it can enforce, fraud screening, or compliance of any kind. Those are most of what a real processor sells.</p>
     <p><b>Not solving the hard problem.</b> The customer still needs USDC. That's the actual barrier and no contract design fixes it.</p>
-    <p><b>Not a fair launch.</b> SWIPE is issued by the operator to whoever they choose. Merchants earning it by volume would be better and truer; that isn't what's deployed.</p>
+    <p><b>Still not a fair launch.</b> Merchants earn automatically now, but the operator can also mint by hand, so the supply is part earned and part granted. Compare <code>earnedTotal</code> against total supply to see the split — the contract publishes both rather than only the flattering one.</p>
     <p><b>Not audited.</b> Verified against simulations, which is not the same thing, and running on a testnet with play money.</p>
   </div>
 
@@ -167,8 +182,8 @@
   <a class="cta" href="./terminal.html">Accept a payment →</a>
 
   <footer>
-    Terminal <a href="https://testnet.arcscan.app/address/0xC168439DbFA9Ea78C32A0e3dB99eBA9284B860A3" target="_blank" rel="noopener">0xC168…60A3</a> ·
-    Interchange <a href="https://testnet.arcscan.app/address/0xa551b604bf2BEd9D52cA80e5602836B67403b98E" target="_blank" rel="noopener">0xa551…b98E</a><br>
+    Terminal <a href="https://testnet.arcscan.app/address/0x8c875a187e4650B4a207Cd4d5049229E3c7c878f" target="_blank" rel="noopener">0x8c87…878f</a> ·
+    Interchange <a href="https://testnet.arcscan.app/address/0x5A1b6CD6b967dACc11420Df71300Fd4BeBFECcD5" target="_blank" rel="noopener">0x5A1b…CcD5</a><br>
     Arc Testnet, chain 5042002
   </footer>
 </div>
