@@ -221,7 +221,7 @@
 
   <p class="note">
     Pool <a href="https://testnet.arcscan.app/address/0x074327EAB4D545240A83F2Af27c53Da060898cE6" target="_blank" rel="noopener">0x0743…8cE6</a> ·
-    <a href="./interchange.html">SWIPE</a> · Arc Testnet · unaudited · play money only
+    <a href="./interchange.html">SWIPE</a> · <a href="https://faucet.circle.com" target="_blank" rel="noopener">Get testnet USDC</a> · Arc Testnet · unaudited
   </p>
   <div class="disc">
     A minimum quantity of LP shares was burned to nobody when the pool opened, so total shares can never return to zero while it holds anything. That's what stops the first depositor inflating the share price and absorbing the second one's deposit — the same failure as a vault whose price runs away when supply approaches zero.
@@ -393,7 +393,9 @@ async function quoteSwap(){
   const have = sw0 ? balA : balB;
   if(me && amt>have){
     $("swQuote").className="quote hot";
-    $("swQuote").innerHTML="You hold <b>"+(sw0?f18(balA)+" SWIPE":f6(balB)+" USDC")+"</b> — less than that.";
+    $("swQuote").innerHTML="You hold <b>"+(sw0?f18(balA)+" SWIPE":f6(balB)+" USDC")+"</b> — less than that."+
+      (sw0 ? " SWIPE is only minted by processing a payment, or bought here."
+           : ' Testnet USDC is free from <a href="https://faucet.circle.com" target="_blank" rel="noopener">Circle\'s faucet</a>.');
     $("swapBtn").disabled=true; return;
   }
   try{
