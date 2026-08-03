@@ -59,6 +59,20 @@
   .sb .res{background:var(--lock);
     background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.22) 0 5px,transparent 5px 10px)}
   .sb-key{display:flex;gap:16px;flex-wrap:wrap;margin-top:9px;font-size:12.5px;color:var(--dim)}
+
+  /* Two different things arrive here and they are easy to confuse when the
+     numbers happen to be similar, so each gets its own box and colour. */
+  .claims{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:20px}
+  .claimbox{border:1px solid var(--line);border-radius:11px;padding:15px;background:#fbfcfc}
+  .claimbox.lock{border-color:#eddcb6;background:var(--lock-soft)}
+  .cb-k{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--brand);margin:0 0 6px}
+  .claimbox.lock .cb-k{color:var(--lock)}
+  .cb-v{font-family:"DM Mono",monospace;font-weight:500;font-size:22px;line-height:1;margin:0 0 7px;color:var(--brand)}
+  .claimbox.lock .cb-v{color:var(--lock)}
+  .cb-n{font-size:12px;color:var(--dim);margin:0 0 12px;line-height:1.5}
+  .claimbox button{padding:9px 14px;font-size:13.5px}
+  @media (max-width:560px){ .claims{grid-template-columns:1fr} }
   .kd{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:0}
   .k1{background:var(--brand)} .k2{background:var(--lock)}
 
@@ -117,7 +131,7 @@
   </div>
 
   <h1>Nobody was allocated any of this.</h1>
-  <p class="lede">Supply started at zero. Every SWIPE that exists was minted by a merchant processing a payment — one per dollar. Stake it and you earn two things from every fee that follows: the USDC itself, and esSWIPE emissions. There is no treasury, no premine, and no function that would let anyone create a unit any other way.</p>
+  <p class="lede">Supply started at zero. Every SWIPE that exists was minted by a merchant processing a payment — one per dollar. Stake it and every fee after that pays you twice: <b>USDC you can spend</b>, and <b>esSWIPE you can't</b> until it converts. There is no treasury, no premine, and no function that would let anyone create a unit any other way.</p>
 
   <!-- SIGNATURE: the claim -->
   <section class="claim">
@@ -138,9 +152,19 @@
         </div>
       </div>
 
-      <div class="two" style="margin-top:18px">
-        <button id="claimBtn" class="hidden">Claim</button>
-        <button id="claimEscBtn" class="hidden lock">Claim esSWIPE</button>
+      <div class="claims" id="claimRow">
+        <div class="claimbox hidden" id="boxFee">
+          <p class="cb-k">Fee share</p>
+          <p class="cb-v" id="cbFee">—</p>
+          <p class="cb-n">Real USDC. Spendable the moment you take it.</p>
+          <button id="claimBtn">Claim USDC</button>
+        </div>
+        <div class="claimbox lock hidden" id="boxEsc">
+          <p class="cb-k">Emissions</p>
+          <p class="cb-v" id="cbEsc">—</p>
+          <p class="cb-n">Escrowed. Can't be sold or sent — becomes SWIPE only by converting over a year.</p>
+          <button id="claimEscBtn" class="lock">Claim esSWIPE</button>
+        </div>
       </div>
       <p class="why" id="claimWhy"></p>
     </div>
@@ -257,13 +281,15 @@ async function loadPos(){
 function render(){
   // the claim
   const has = pos.pending>0n;
+  const hasEsc = pos.pendingEsc>0n;
   $("claimOut").className="amount"+(has?"":" zero");
   $("claimOut").innerHTML=u6(pos.pending)+'<small>USDC</small>';
-  $("claimBtn").classList.toggle("hidden",!has);
-  if(has) $("claimBtn").textContent="Claim "+u6(pos.pending)+" USDC";
-  const hasEsc = pos.pendingEsc>0n;
-  $("claimEscBtn").classList.toggle("hidden",!hasEsc);
-  if(hasEsc) $("claimEscBtn").textContent="Claim "+t18(pos.pendingEsc)+" esSWIPE";
+
+  $("boxFee").classList.toggle("hidden",!has);
+  $("boxEsc").classList.toggle("hidden",!hasEsc);
+  $("claimRow").classList.toggle("hidden", !has && !hasEsc);
+  if(has) $("cbFee").textContent=u6(pos.pending)+" USDC";
+  if(hasEsc) $("cbEsc").textContent=t18(pos.pendingEsc)+" esSWIPE";
 
   $("sMine").textContent=(pos.ppm/10000).toFixed(2)+"%";
 
