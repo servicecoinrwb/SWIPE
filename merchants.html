@@ -53,6 +53,11 @@
   .tag.shut{background:#f2f4f6;color:var(--faint)}
   .tag.new{background:#fdf3e1;color:var(--lock)}
 
+  .m.has{border-left:3px solid var(--ac,var(--brand))}
+  .m-eyebrow{font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--ac,var(--brand));margin:0 0 6px}
+  .m-meta{font-size:13px;color:var(--dim);margin:5px 0 0}
+  .m-desc{font-size:14.5px;color:var(--dim);margin:14px 0 0;line-height:1.6}
   .m-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
     border-radius:9px;overflow:hidden;margin:16px 0 0}
   .m-stats > div{background:#fafbfc;padding:11px 10px;text-align:center}
@@ -104,6 +109,7 @@
 
   <h1>Everyone taking payments <i>on the rail.</i></h1>
   <p class="lede">Nobody vetted this list and nobody can be removed from it — every account that has ever opened is here, alongside what it has actually processed.</p>
+  <p class="lede" style="font-size:14.5px">Descriptions are written by the businesses themselves. The numbers under each one aren't.</p>
 
   <div class="search">
     <input id="q" placeholder="Search by name or address" autocomplete="off">
@@ -116,7 +122,7 @@
     Arc Testnet · unaudited · play money only
   </p>
   <div class="disc">
-    A name here is whatever the account typed when it opened, and nothing verifies it. What can't be faked are the numbers underneath — volume, payment count and how long the account has existed all come straight from the chain. Treat the name as a claim and the record as evidence.
+    Names and descriptions are editorial — they live in a JSON file in this repo, not on the chain, and anyone who can commit can change them. What can't be faked are the numbers underneath: volume, payment count and account age all come straight from the contract. Treat the words as a claim and the record as evidence.
   </div>
 </div>
 
@@ -136,9 +142,24 @@ const f=v=>Number(ethers.formatUnits(v,6)).toLocaleString("en-US",{maximumFracti
 const shortA=a=>a.slice(0,6)+"…"+a.slice(-4);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-let all=[];
+let all=[], profiles={};
+
+/* Descriptions live in a JSON file in this repo rather than on chain.
+   The chain has no room for them and no need to — a name and a wallet is
+   all a payment needs. Everything loaded here is editorial: whoever can
+   commit to the repo can change it, which is why the numbers underneath
+   come from the contract instead. */
+async function loadProfiles(){
+  try{
+    const r=await fetch("./merchants.json",{cache:"no-cache"});
+    if(!r.ok) return;
+    const j=await r.json();
+    for(const k in j){ if(k.startsWith("_")) continue; profiles[k.toLowerCase()]=j[k]; }
+  }catch(_){ /* a missing file just means no profiles, not a broken page */ }
+}
 
 (async function(){
+  await loadProfiles();
   try{
     const n=Number(await rd(c=>c.merchantCount()));
     if(n===0){ renderEmpty(); return; }
@@ -165,8 +186,14 @@ function renderEmpty(){
 
 function render(){
   const q=$("q").value.trim().toLowerCase();
-  const rows=all.filter(m =>
-    !q || m.name.toLowerCase().includes(q) || m.addr.toLowerCase().includes(q));
+  const rows=all.filter(m => {
+    if(!q) return true;
+    const pr=profiles[m.addr.toLowerCase()];
+    const hay=[m.name, m.addr,
+      pr&&pr.name, pr&&pr.tagline, pr&&pr.category, pr&&pr.location, pr&&pr.description]
+      .filter(Boolean).join(" ").toLowerCase();
+    return hay.includes(q);
+  });
 
   if(!rows.length){
     $("list").innerHTML='<p class="why">Nothing matches that.</p>';
@@ -182,11 +209,24 @@ function render(){
       : m.payments===0 ? '<span class="tag new">New · nothing processed</span>'
       : '<span class="tag open">Accepting</span>';
     const link="./terminal.html?to="+m.addr;
-    return '<div class="m'+(m.closed?' closed':'')+'">'+
+    const pr=profiles[m.addr.toLowerCase()]||null;
+    const display = pr && pr.name ? pr.name : (m.name||"(unnamed)");
+    const meta=[];
+    if(pr && pr.category) meta.push(esc(pr.category));
+    if(pr && pr.location) meta.push(esc(pr.location));
+    const accent = pr && pr.accent ? pr.accent : null;
+
+    return '<div class="m'+(m.closed?' closed':'')+(pr?' has':'')+'"'+
+      (accent?' style="--ac:'+esc(accent)+'"':'')+'>'+
       '<div class="m-top"><div>'+
-        '<p class="m-name">'+esc(m.name||"(unnamed)")+'</p>'+
-        '<p class="m-addr">'+shortA(m.addr)+'</p>'+
+        (pr && pr.tagline ? '<p class="m-eyebrow">'+esc(pr.tagline)+'</p>' : '')+
+        '<p class="m-name">'+esc(display)+'</p>'+
+        (meta.length ? '<p class="m-meta">'+meta.join(" · ")+'</p>' : '')+
+        '<p class="m-addr">'+shortA(m.addr)+
+          (pr && pr.name && m.name && pr.name!==m.name ? ' · onchain name "'+esc(m.name)+'"' : '')+
+        '</p>'+
       '</div>'+tag+'</div>'+
+      (pr && pr.description ? '<p class="m-desc">'+esc(pr.description)+'</p>' : '')+
       '<dl class="m-stats">'+
         '<div><dt>Processed</dt><dd>'+f(gross)+'</dd></div>'+
         '<div><dt>Payments</dt><dd>'+m.payments+'</dd></div>'+
@@ -195,6 +235,7 @@ function render(){
       (m.closed ? '' :
       '<div class="m-acts">'+
         '<a href="'+link+'">Pay them</a>'+
+        (pr && pr.url ? '<a class="ghost" href="'+esc(pr.url)+'" target="_blank" rel="noopener">Visit site</a>' : '')+
         '<button class="ghost" data-copy="'+m.addr+'">Copy pay link</button>'+
       '</div>')+
     '</div>';
