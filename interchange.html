@@ -191,12 +191,12 @@
   </section>
 
   <p class="note">
-    Interchange <a href="https://testnet.arcscan.app/address/0xebaAe1809B2F05183Eda97e85C9fbCD74a8E5116" target="_blank" rel="noopener">0xebaA…5116</a> ·
+    Interchange <a href="https://testnet.arcscan.app/address/0x9B57a2cd9D721c0153851FB410D8f7948CB27F95" target="_blank" rel="noopener">0x9B57…7F95</a> ·
     fed by <a href="./terminal.html">Terminal</a><br>
     Arc Testnet · unaudited · play money only
   </p>
   <div class="disc">
-    Emissions track fees rather than a clock. A month with no payments emits nothing, because nothing was earned — there is no schedule to front-run and no way for supply to grow without someone having paid for something. After the rail was named, this contract has no owner at all.
+    SWIPE minted for a refunded sale is burned, so supply follows net volume rather than gross. Where a merchant had already moved theirs, the shortfall is published as unrecovered rather than quietly ignored. Emissions track fees rather than a clock. A month with no payments emits nothing, because nothing was earned — there is no schedule to front-run and no way for supply to grow without someone having paid for something. After the rail was named, this contract has no owner at all.
   </div>
 </div>
 
@@ -204,12 +204,12 @@
 const NET={ label:"Arc Testnet", chainId:5042002,
   rpcs:["https://rpc.blockdaemon.testnet.arc.network","https://arc-testnet.drpc.org","https://rpc.quicknode.testnet.arc.network","https://5042002.rpc.thirdweb.com"],
   explorer:"https://testnet.arcscan.app",
-  interchange:"0xebaAe1809B2F05183Eda97e85C9fbCD74a8E5116" };
+  interchange:"0x9B57a2cd9D721c0153851FB410D8f7948CB27F95" };
 const IC=NET.interchange, RPCS=NET.rpcs, CHAIN=NET.chainId;
 
 const ABI=[
   "function positionOf(address) view returns (tuple(uint256 balance,uint256 staked,uint256 reserved,uint256 freeToUnstake,uint256 escrow,uint256 vesting,uint256 vestPerDay,uint256 pendingFees,uint256 pendingEscrow,uint256 shareOfPoolPpm))",
-  "function book() view returns (tuple(uint256 supply,uint256 escrowSupply,uint256 totalStaked,uint256 totalVesting,uint256 feesReceived,uint256 feesPaid,uint256 volumeProcessed,uint256 mintedToMerchants,uint256 emittedToStakers,uint256 stakedPct,address terminal))",
+  "function book() view returns (tuple(uint256 supply,uint256 escrowSupply,uint256 totalStaked,uint256 totalVesting,uint256 feesReceived,uint256 feesPaid,uint256 volumeProcessed,uint256 mintedToMerchants,uint256 emittedToStakers,uint256 stakedPct,address terminal,uint256 clawedBack,uint256 unrecovered))",
   "function stake(uint256)","function unstake(uint256)","function claimFees() returns (uint256)",
   "function claimEscrow() returns (uint256)",
   "function vest(uint256)","function cancelVest() returns (uint256)","function settleVesting(address)",
