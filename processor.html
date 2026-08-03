@@ -172,14 +172,13 @@
     </div>
   </div>
 
-  <h2>Where this is genuinely weak</h2>
-  <div class="plain">
-    <p><b>It isn't a card network.</b> No chargebacks, no disputes, no fraud screening, no identity checks, no compliance. Those are most of what a processor really sells, and none of them are here. This is only the moving-money part, which is the easy part.</p>
-    <p><b>The customer needs USDC.</b> That's the real adoption problem and no amount of contract design solves it. Until someone can pay from a card and have it arrive as stablecoin, this is for people who already hold it.</p>
-    <p><b>Percentage pricing breaks on large tickets.</b> 2.5% of a $38,000 equipment job is $950 to move a wire, which is indefensible however it compares to a card network. The rate is immutable, so the honest fix is a second deployment at a lower rate rather than an operator who can change the price.</p>
-    <p><b>Nobody has been paid to use it.</b> Supply starts at zero and only a payment mints any, which is the honest version — but it also means there is no marketing budget, no liquidity incentive, and no reason for anyone to show up first. Bootstrapping a two-sided network with no subsidy is genuinely hard, and this makes no attempt to pretend otherwise.</p>
-    <p><b>Unaudited, on a testnet.</b> The fee accounting is verified against a simulation of 20,000 randomized staking pools with no pool ever paying out more than it took in — a bug the first version had. That is not a professional review.</p>
-  </div>
+  <h2>Why it settles instantly</h2>
+  <p class="body">Card money moves through an acquirer, a network, and an issuer before it reaches you, and each of them wants a day. That's where the two-to-three-day wait comes from — not from anything technical, but from a chain of intermediaries each holding your money briefly on the way past.</p>
+  <p class="body">Here there's no chain. The customer signs once and the split happens inside that transaction: your share to your wallet, the fee to the pool. <b>Nothing is held between transactions</b>, because there's no code path that would hold it — the contract has no balance to sweep and no owner to sweep it.</p>
+
+  <h2>And no chargebacks</h2>
+  <p class="body">A settled payment is settled. That's a genuine advantage for anyone who's eaten a fraudulent dispute sixty days after doing the work, and a genuine disadvantage for the customer, who has no recourse if you don't deliver.</p>
+  <p class="body">Which side that suits depends entirely on your business. It suits contractors invoicing commercial customers. It suits a stranger buying something online far less. <a href="./processor-guide.html">The guide covers what this does and doesn't do</a> in more detail than a front page should.</p>
 
   <footer>
     Terminal <a href="https://testnet.arcscan.app/address/0xB21b0396896Caf29Ab9306F9eA958E6E805d967c" target="_blank" rel="noopener">0xB21b…967c</a> ·
