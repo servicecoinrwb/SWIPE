@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Merchants · SWIPE</title>
+<meta name="description" content="Every business accepting payments on the rail, with what they've actually processed.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#fbfbfc; --card:#ffffff; --ink:#0b0f14; --dim:#5a6570; --faint:#8b95a1;
+    --line:#e6e9ed; --line-2:#d3d9e0;
+    --brand:#0f7a6b; --brand-soft:#e6f4f1; --lock:#b5822a; --warn:#b4432f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-size:15.5px;line-height:1.6;
+    padding:26px 16px 80px;display:flex;justify-content:center;-webkit-font-smoothing:antialiased}
+  .shell{width:100%;max-width:680px}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:28px;flex-wrap:wrap}
+  .mark{font-weight:800;font-size:19px;letter-spacing:-.03em}
+  .mark i{font-style:normal;color:var(--brand)}
+  .nav{display:flex;gap:6px;flex-wrap:wrap}
+  .nav a{font-size:13px;font-weight:500;color:var(--dim);text-decoration:none;padding:6px 11px;border-radius:7px}
+  .nav a:hover,.nav a.on{background:var(--brand-soft);color:var(--brand)}
+
+  h1{font-size:clamp(26px,5.6vw,34px);line-height:1.14;letter-spacing:-.03em;font-weight:800;margin:0 0 8px}
+  h1 i{font-style:normal;color:var(--brand)}
+  .lede{font-size:16px;color:var(--dim);margin:0 0 22px;max-width:54ch}
+
+  .search{position:relative;margin-bottom:16px}
+  .search input{width:100%;font-size:15px;padding:13px 15px;border:1px solid var(--line-2);
+    border-radius:11px;background:#fff;color:var(--ink);font-family:inherit}
+  .search input:focus-visible{outline:2px solid var(--brand);outline-offset:-1px;border-color:transparent}
+  .search input::placeholder{color:#b6bec7}
+
+  /* SIGNATURE: the merchant card, built from what the chain knows */
+  .m{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:20px;margin-bottom:12px;transition:border-color .14s,box-shadow .14s}
+  .m:hover{border-color:var(--line-2);box-shadow:0 2px 10px rgba(0,0,0,.04)}
+  .m.closed{opacity:.6}
+  .m-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+  .m-name{font-size:19px;font-weight:700;letter-spacing:-.02em;margin:0;overflow-wrap:anywhere}
+  .m-addr{font-family:"DM Mono",monospace;font-size:11px;color:var(--faint);margin:4px 0 0}
+  .tag{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+    padding:3px 9px;border-radius:99px;white-space:nowrap}
+  .tag.open{background:var(--brand-soft);color:var(--brand)}
+  .tag.shut{background:#f2f4f6;color:var(--faint)}
+  .tag.new{background:#fdf3e1;color:var(--lock)}
+
+  .m-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+    border-radius:9px;overflow:hidden;margin:16px 0 0}
+  .m-stats > div{background:#fafbfc;padding:11px 10px;text-align:center}
+  .m-stats dt{font-family:"DM Mono",monospace;font-size:9px;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 4px}
+  .m-stats dd{margin:0;font-family:"DM Mono",monospace;font-size:14px;font-weight:500}
+
+  .m-acts{display:flex;gap:9px;margin-top:14px;flex-wrap:wrap}
+  .m-acts a,.m-acts button{flex:1;min-width:130px;text-align:center;text-decoration:none;
+    font-family:"Plus Jakarta Sans",sans-serif;font-size:14px;font-weight:600;
+    padding:10px 15px;border-radius:9px;border:0;cursor:pointer;
+    background:var(--brand);color:#fff}
+  .m-acts a:hover{filter:brightness(1.08)}
+  .m-acts .ghost{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line-2)}
+  .m-acts .ghost:hover{background:#f6f7f9;filter:none}
+
+  .empty{background:var(--card);border:1px dashed var(--line-2);border-radius:14px;
+    padding:36px 24px;text-align:center}
+  .empty h3{font-size:18px;font-weight:700;margin:0 0 8px;letter-spacing:-.02em}
+  .empty p{font-size:14.5px;color:var(--dim);margin:0 0 18px;max-width:40ch;margin-left:auto;margin-right:auto}
+  .empty a{display:inline-block;font-size:14.5px;font-weight:600;text-decoration:none;
+    padding:11px 20px;border-radius:9px;background:var(--brand);color:#fff}
+
+  .why{font-family:"DM Mono",monospace;font-size:11.5px;line-height:1.65;color:var(--dim);margin:12px 0 0}
+  .note{font-family:"DM Mono",monospace;font-size:11px;line-height:1.75;color:var(--faint);
+    margin-top:22px;text-align:center}
+  .note a{color:var(--dim)}
+  .disc{border-left:2px solid var(--line-2);padding:2px 0 2px 14px;margin:16px 0 0;
+    font-size:12.5px;color:var(--faint);line-height:1.7}
+  a{color:var(--brand)}
+  .hidden{display:none !important}
+  @media (max-width:520px){ .m-stats{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="mark">Mer<i>chants</i></div>
+    <nav class="nav">
+      <a href="./index.html">Home</a>
+      <a href="./merchants.html" class="on">Merchants</a>
+      <a href="./terminal.html">Accept</a>
+      <a href="./interchange.html">Stake</a>
+      <a href="./pool.html">Pool</a>
+      <a href="./processor-guide.html">Docs</a>
+    </nav>
+  </div>
+
+  <h1>Everyone taking payments <i>on the rail.</i></h1>
+  <p class="lede">Nobody vetted this list and nobody can be removed from it — every account that has ever opened is here, alongside what it has actually processed.</p>
+
+  <div class="search">
+    <input id="q" placeholder="Search by name or address" autocomplete="off">
+  </div>
+
+  <div id="list"><p class="why">Reading the chain…</p></div>
+
+  <p class="note">
+    Terminal <a href="https://testnet.arcscan.app/address/0xDBc6e2ACC9B739417412AD675ef0740E3fA224f9" target="_blank" rel="noopener">0xDBc6…24f9</a><br>
+    Arc Testnet · unaudited · play money only
+  </p>
+  <div class="disc">
+    A name here is whatever the account typed when it opened, and nothing verifies it. What can't be faked are the numbers underneath — volume, payment count and how long the account has existed all come straight from the chain. Treat the name as a claim and the record as evidence.
+  </div>
+</div>
+
+<script>
+const RPCS=["https://rpc.blockdaemon.testnet.arc.network","https://arc-testnet.drpc.org","https://rpc.quicknode.testnet.arc.network","https://5042002.rpc.thirdweb.com"];
+const TM="0xDBc6e2ACC9B739417412AD675ef0740E3fA224f9";
+const ABI=[
+  "function merchantCount() view returns (uint256)",
+  "function merchantAt(uint256) view returns (address)",
+  "function merchantOf(address) view returns (tuple(bool exists,bool closed,address payout,string name,uint256 received,uint256 feesPaid,uint256 refunded,uint32 payments,uint64 since))"
+];
+const pool=RPCS.map(u=>new ethers.JsonRpcProvider(u));
+async function rd(fn){ let e; for(const p of pool){ try{ return await fn(new ethers.Contract(TM,ABI,p)); }catch(x){e=x;} } throw e; }
+
+const $=id=>document.getElementById(id);
+const f=v=>Number(ethers.formatUnits(v,6)).toLocaleString("en-US",{maximumFractionDigits:2});
+const shortA=a=>a.slice(0,6)+"…"+a.slice(-4);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+let all=[];
+
+(async function(){
+  try{
+    const n=Number(await rd(c=>c.merchantCount()));
+    if(n===0){ renderEmpty(); return; }
+    for(let i=n-1;i>=0;i--){
+      const a=await rd(c=>c.merchantAt(i));
+      const m=await rd(c=>c.merchantOf(a));
+      if(!m.exists) continue;
+      all.push({addr:a,closed:m.closed,name:m.name,
+                received:m.received,feesPaid:m.feesPaid,refunded:m.refunded,
+                payments:Number(m.payments),since:Number(m.since)});
+    }
+    render();
+  }catch(e){
+    console.error(e);
+    $("list").innerHTML='<p class="why">Couldn\'t reach the contract — the public RPCs throttle under load. Reload in a moment.</p>';
+  }
+})();
+
+function renderEmpty(){
+  $("list").innerHTML='<div class="empty"><h3>Nobody has opened an account yet</h3>'+
+    '<p>The first merchant on the rail gets to be the first merchant on the rail. It takes one transaction and no approval from anyone.</p>'+
+    '<a href="./terminal.html">Open an account →</a></div>';
+}
+
+function render(){
+  const q=$("q").value.trim().toLowerCase();
+  const rows=all.filter(m =>
+    !q || m.name.toLowerCase().includes(q) || m.addr.toLowerCase().includes(q));
+
+  if(!rows.length){
+    $("list").innerHTML='<p class="why">Nothing matches that.</p>';
+    return;
+  }
+
+  $("list").innerHTML = rows.map(m=>{
+    const gross = m.received + m.feesPaid;
+    const days = Math.floor((Date.now()/1000 - m.since)/86400);
+    // A brand new account with no history is worth flagging as exactly that,
+    // rather than letting it sit alongside one with a year of volume.
+    const tag = m.closed ? '<span class="tag shut">Not accepting</span>'
+      : m.payments===0 ? '<span class="tag new">New · nothing processed</span>'
+      : '<span class="tag open">Accepting</span>';
+    const link="./terminal.html?to="+m.addr;
+    return '<div class="m'+(m.closed?' closed':'')+'">'+
+      '<div class="m-top"><div>'+
+        '<p class="m-name">'+esc(m.name||"(unnamed)")+'</p>'+
+        '<p class="m-addr">'+shortA(m.addr)+'</p>'+
+      '</div>'+tag+'</div>'+
+      '<dl class="m-stats">'+
+        '<div><dt>Processed</dt><dd>'+f(gross)+'</dd></div>'+
+        '<div><dt>Payments</dt><dd>'+m.payments+'</dd></div>'+
+        '<div><dt>Open</dt><dd>'+(days===0?"today":days+"d")+'</dd></div>'+
+      '</dl>'+
+      (m.closed ? '' :
+      '<div class="m-acts">'+
+        '<a href="'+link+'">Pay them</a>'+
+        '<button class="ghost" data-copy="'+m.addr+'">Copy pay link</button>'+
+      '</div>')+
+    '</div>';
+  }).join("");
+
+  $("list").querySelectorAll("[data-copy]").forEach(b=>b.onclick=()=>{
+    const url=location.origin+location.pathname.replace(/merchants\.html$/,"terminal.html")+"?to="+b.dataset.copy;
+    navigator.clipboard.writeText(url);
+    const old=b.textContent; b.textContent="Copied"; setTimeout(()=>b.textContent=old,1500);
+  });
+}
+$("q").addEventListener("input",render);
+</script>
+</body>
+</html>
