@@ -146,23 +146,24 @@
   </dl>
   <p class="body" style="margin-top:-18px;font-family:'DM Mono',monospace;font-size:12px;color:var(--faint)" id="earnLine"></p>
 
-  <h2>What it actually costs</h2>
-  <p class="body">Straight comparison against 2.9% + 30¢. The saving is real and it is not enormous — anyone telling you a few basis points changes your business is selling something.</p>
+  <h2>The fee falls as the ticket grows</h2>
+  <p class="body">Charged in brackets, like tax — 2.5% on the first $500, 1% up to $5,000, a quarter percent above that. Each rate applies only to the slice inside it, so the effective rate declines smoothly and a bigger payment never costs less in absolute terms than a smaller one.</p>
   <table>
-    <tr><th>Ticket</th><th class="num">Here</th><th class="num">2.9% + 30¢</th><th class="num">You keep</th></tr>
-    <tr><td>$4 coffee</td><td class="num">0.10</td><td class="num">0.42</td><td class="num win">+0.32</td></tr>
-    <tr><td>$85 service call</td><td class="num">2.13</td><td class="num">2.77</td><td class="num win">+0.64</td></tr>
-    <tr><td>$450 repair</td><td class="num">11.25</td><td class="num">13.35</td><td class="num win">+2.10</td></tr>
-    <tr><td>$2,450 invoice</td><td class="num">61.25</td><td class="num">71.35</td><td class="num win">+10.10</td></tr>
+    <tr><th>Ticket</th><th class="num">Here</th><th class="num">Effective</th><th class="num">2.9% + 30¢</th><th class="num">You keep</th></tr>
+    <tr><td>$85 service call</td><td class="num">2.13</td><td class="num">2.50%</td><td class="num">2.77</td><td class="num win">+0.64</td></tr>
+    <tr><td>$450 repair</td><td class="num">11.25</td><td class="num">2.50%</td><td class="num">13.35</td><td class="num win">+2.10</td></tr>
+    <tr><td>$2,450 invoice</td><td class="num">32.00</td><td class="num">1.31%</td><td class="num">71.35</td><td class="num win">+39.35</td></tr>
+    <tr><td>$38,000 changeout</td><td class="num">140.00</td><td class="num">0.37%</td><td class="num">1,102.30</td><td class="num win">+962.30</td></tr>
   </table>
-  <p class="body">The bigger difference is <b>when</b>. Card settlement is two or three days, and during those days your money is earning interest for somebody else. Here it is in the merchant's wallet before the customer has put their phone away.</p>
+  <p class="body">A flat percentage is indefensible at scale — 2.5% of a thirty-eight thousand dollar job is $950 to move a wire. Here it's $140, and against a card it's a difference worth having rather than a rounding argument.</p>
+  <p class="body">The other difference is <b>when</b>. Card settlement takes two or three days, and during those days your money earns interest for somebody else. Here it's in the merchant's wallet before the customer has put their phone away.</p>
 
   <h2>Two sides of the same thing</h2>
   <div class="pair">
     <div class="side">
       <p class="k">Merchants</p>
       <h3>Take payments</h3>
-      <p>Open an account in one transaction — no application, no underwriting, no approval. Share a link, get paid, keep 97.5%.</p>
+      <p>Open an account in one transaction — no application, no underwriting, no approval. Share a link, get paid, and refund anything you need to.</p>
       <a class="go" href="./terminal.html">Accept payments</a>
     </div>
     <div class="side g">
@@ -177,29 +178,30 @@
   <p class="body">Card money moves through an acquirer, a network, and an issuer before it reaches you, and each of them wants a day. That's where the two-to-three-day wait comes from — not from anything technical, but from a chain of intermediaries each holding your money briefly on the way past.</p>
   <p class="body">Here there's no chain. The customer signs once and the split happens inside that transaction: your share to your wallet, the fee to the pool. <b>Nothing is held between transactions</b>, because there's no code path that would hold it — the contract has no balance to sweep and no owner to sweep it.</p>
 
-  <h2>And no chargebacks</h2>
-  <p class="body">A settled payment is settled. That's a genuine advantage for anyone who's eaten a fraudulent dispute sixty days after doing the work, and a genuine disadvantage for the customer, who has no recourse if you don't deliver.</p>
+  <h2>Refunds yes, chargebacks no</h2>
+  <p class="body">A merchant can send any payment back, in whole or in part, whenever they like — and the money goes to whoever actually paid it rather than an address they type in. What doesn't exist is a customer <i>forcing</i> one.</p>
+  <p class="body">That's a genuine advantage for anyone who's eaten a fraudulent dispute sixty days after doing the work, and a genuine disadvantage for a customer with no recourse if you don't deliver.</p>
   <p class="body">Which side that suits depends entirely on your business. It suits contractors invoicing commercial customers. It suits a stranger buying something online far less. <a href="./processor-guide.html">The guide covers what this does and doesn't do</a> in more detail than a front page should.</p>
 
   <footer>
-    Terminal <a href="https://testnet.arcscan.app/address/0xB21b0396896Caf29Ab9306F9eA958E6E805d967c" target="_blank" rel="noopener">0xB21b…967c</a> ·
-    Interchange <a href="https://testnet.arcscan.app/address/0xebaAe1809B2F05183Eda97e85C9fbCD74a8E5116" target="_blank" rel="noopener">0xebaA…5116</a><br>
+    Terminal <a href="https://testnet.arcscan.app/address/0xDBc6e2ACC9B739417412AD675ef0740E3fA224f9" target="_blank" rel="noopener">0xDBc6…24f9</a> ·
+    Interchange <a href="https://testnet.arcscan.app/address/0x9B57a2cd9D721c0153851FB410D8f7948CB27F95" target="_blank" rel="noopener">0x9B57…7F95</a><br>
     Arc Testnet, chain 5042002 — both verified onchain, read the source before you trust the page.
   </footer>
 </div>
 
 <script>
 const RPCS=["https://rpc.blockdaemon.testnet.arc.network","https://arc-testnet.drpc.org","https://rpc.quicknode.testnet.arc.network","https://5042002.rpc.thirdweb.com"];
-const TM="0xB21b0396896Caf29Ab9306F9eA958E6E805d967c";
-const IC="0xebaAe1809B2F05183Eda97e85C9fbCD74a8E5116";
+const TM="0xDBc6e2ACC9B739417412AD675ef0740E3fA224f9";
+const IC="0x9B57a2cd9D721c0153851FB410D8f7948CB27F95";
 const pool=RPCS.map(u=>new ethers.JsonRpcProvider(u));
 const $=id=>document.getElementById(id);
 const u6=v=>Number(ethers.formatUnits(v,6)).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 (async function(){
   // Volume and merchant count live on the rail; minted supply lives on the
   // pool, because the pool is what mints it.
-  const tAbi=["function book() view returns (tuple(uint256 volume,uint256 feesRouted,uint256 payments,uint256 merchants,uint16 feeBps,address sink))"];
-  const iAbi=["function book() view returns (tuple(uint256 supply,uint256 escrowSupply,uint256 totalStaked,uint256 totalVesting,uint256 feesReceived,uint256 feesPaid,uint256 volumeProcessed,uint256 mintedToMerchants,uint256 emittedToStakers,uint256 stakedPct,address terminal))"];
+  const tAbi=["function book() view returns (tuple(uint256 volume,uint256 feesRouted,uint256 refunded,uint256 payments,uint256 merchants,address sink))"];
+  const iAbi=["function book() view returns (tuple(uint256 supply,uint256 escrowSupply,uint256 totalStaked,uint256 totalVesting,uint256 feesReceived,uint256 feesPaid,uint256 volumeProcessed,uint256 mintedToMerchants,uint256 emittedToStakers,uint256 stakedPct,address terminal,uint256 clawedBack,uint256 unrecovered))"];
   for(const p of pool){
     try{
       const b=await new ethers.Contract(TM,tAbi,p).book();
