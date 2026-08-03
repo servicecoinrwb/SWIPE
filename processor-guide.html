@@ -143,9 +143,28 @@
     <p>Topping up mid-way never delays what you were already converting. Add more at month six and the original finishes on its original schedule while the new amount runs its own.</p>
   </div>
 
+  <h2>How the fee is calculated</h2>
+  <p>In marginal brackets, like income tax. Each rate applies only to the portion of a payment inside its band:</p>
+  <table>
+    <tr><th>Band</th><th>Rate</th></tr>
+    <tr><td>First $500</td><td>2.50%</td></tr>
+    <tr><td>$500 to $5,000</td><td>1.00%</td></tr>
+    <tr><td>Above $5,000</td><td>0.25%</td></tr>
+  </table>
+  <p>So a $38,000 job pays 2.5% on the first 500, 1% on the next 4,500, and 0.25% on the remaining 33,000 — <b>$140 in total, an effective 0.37%</b>. A flat rate would have charged $950.</p>
+  <p>The alternative, a flat rate per bracket, produces the absurdity of a $500 payment costing less in absolute dollars than a $499 one. Marginal has no cliff: the fee rises monotonically with the amount, always.</p>
+  <p>All three rates are compiled-in constants. A rail whose operator can reprice it is a rail whose operator can reprice it <i>after</i> you've integrated.</p>
+
+  <h2>Refunds</h2>
+  <p>The merchant can send back any part of a payment, at any time. Two details that matter:</p>
+  <p><b>The money goes to the recorded payer</b>, not to an address the merchant supplies. A refund that can be pointed anywhere is a withdrawal with a friendly name.</p>
+  <p><b>The SWIPE minted for that sale is burned.</b> You don't keep the reward for a sale you undid. If the merchant already spent or staked it, the clawback takes what it can and publishes the shortfall as <code>unrecovered</code> — it never reverts, because a customer getting their money back matters more than the supply figure being exactly right.</p>
+  <p>The fee isn't returned. It went to stakers when the payment landed and several will have claimed it; reversing that would mean reaching into other people's balances. A refunded sale costs the merchant the fee, exactly as a refunded card sale usually does.</p>
+
   <h2>Where the supply comes from</h2>
   <p>Zero at genesis. Not a small premine, not a treasury allocation, not a founder tranche vesting over eighteen months — zero. Every SWIPE that will ever exist is minted by a payment being processed, and no function exists that would let anyone create one another way.</p>
   <p>A merchant is minted <b>one SWIPE per dollar of volume</b>. Stakers are emitted <b>esSWIPE at a fixed ratio to the fee</b>, alongside the USDC. That's the entire monetary policy, and it can't be changed by anyone including whoever deployed it.</p>
+  <p>Payments under a dollar settle normally but mint nothing. Without that floor, ten thousand one-cent payments would be a cheap way to farm supply — the gas and fees would cost something, but not enough.</p>
   <div class="fig">
     <p class="fig-lab">A $2,450 invoice</p>
     <table style="margin:0">
@@ -184,8 +203,9 @@
   <p>There isn't any. No chargebacks, no fraud screening, no identity checks, no compliance layer. A card network is mostly those things and only incidentally a way to move money — this is the moving-money part.</p>
   <p><b>Where it does fit:</b> transactions with a contract behind them, between parties who already know each other.</p>
 
-  <h3>If your tickets are large</h3>
-  <p>A flat 2.5% stops making sense as amounts grow. On a thirty-eight thousand dollar equipment job that's $950 to move a wire, which is indefensible however it compares to a card. The rate is immutable by design, so the fix is a second deployment at a lower rate rather than an operator who can change the price — uglier, and much easier to trust.</p>
+  <h3>If you need someone to force a refund</h3>
+  <p>A merchant can refund whenever they choose, but a customer cannot compel one. There's no dispute process and no arbiter — if a merchant takes your money and vanishes, the chain will faithfully record that they did.</p>
+  <p><b>Where it does fit:</b> anywhere you'd already have accepted a bank transfer.</p>
 
   <h2>Two more things worth knowing</h2>
   <div class="plain">
@@ -198,8 +218,8 @@
   <a class="cta" href="./terminal.html">Accept a payment →</a>
 
   <footer>
-    Terminal <a href="https://testnet.arcscan.app/address/0xB21b0396896Caf29Ab9306F9eA958E6E805d967c" target="_blank" rel="noopener">0xB21b…967c</a> ·
-    Interchange <a href="https://testnet.arcscan.app/address/0xebaAe1809B2F05183Eda97e85C9fbCD74a8E5116" target="_blank" rel="noopener">0xebaA…5116</a><br>
+    Terminal <a href="https://testnet.arcscan.app/address/0xDBc6e2ACC9B739417412AD675ef0740E3fA224f9" target="_blank" rel="noopener">0xDBc6…24f9</a> ·
+    Interchange <a href="https://testnet.arcscan.app/address/0x9B57a2cd9D721c0153851FB410D8f7948CB27F95" target="_blank" rel="noopener">0x9B57…7F95</a><br>
     Arc Testnet, chain 5042002
   </footer>
 </div>
