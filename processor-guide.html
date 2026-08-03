@@ -172,12 +172,24 @@
   <p>The standard fee-accumulator pattern has a rounding flaw that ships in production contracts constantly. Per-share accounting floors when a fee is deposited, but each staker's own multiplication can round the other way — so the <b>last person to claim</b> from a pool is owed a unit or two more than the contract actually holds. Their transaction reverts, and the final claimant can never withdraw.</p>
   <p>Across 20,000 randomized pools, 2,213 hit it. The fix is to pay the lesser of what's owed and what's held, so the shortfall — at most a few millionths of a dollar — is dropped rather than turning into a permanently stuck balance. After the fix: zero.</p>
 
-  <h2>What this isn't</h2>
+  <h2>Where this doesn't fit</h2>
+  <p>Worth being direct about, because the answer decides whether it's useful to you at all.</p>
+
+  <h3>If your customers don't hold stablecoins</h3>
+  <p>Then this doesn't work yet, full stop. There's no card path — someone paying has to already have USDC on Arc. A fiat on-ramp at checkout would fix it, but ramps charge their own fee, and stacking that on top would land above what a card costs. So the cheap version needs a customer who already holds it, and the convenient version isn't cheap.</p>
+  <p><b>Where it does fit:</b> businesses invoicing other businesses, where the payer has a treasury and a wallet is not an obstacle.</p>
+
+  <h3>If you need dispute resolution</h3>
+  <p>There isn't any. No chargebacks, no fraud screening, no identity checks, no compliance layer. A card network is mostly those things and only incidentally a way to move money — this is the moving-money part.</p>
+  <p><b>Where it does fit:</b> transactions with a contract behind them, between parties who already know each other.</p>
+
+  <h3>If your tickets are large</h3>
+  <p>A flat 2.5% stops making sense as amounts grow. On a thirty-eight thousand dollar equipment job that's $950 to move a wire, which is indefensible however it compares to a card. The rate is immutable by design, so the fix is a second deployment at a lower rate rather than an operator who can change the price — uglier, and much easier to trust.</p>
+
+  <h2>Two more things worth knowing</h2>
   <div class="plain">
-    <p><b>Not a card network.</b> No chargebacks, disputes, refunds it can enforce, fraud screening, or compliance of any kind. Those are most of what a real processor sells.</p>
-    <p><b>Not solving the hard problem.</b> The customer still needs USDC. That's the actual barrier and no contract design fixes it.</p>
-    <p><b>No subsidy, which cuts both ways.</b> Nothing was allocated to bootstrap this — no liquidity mining, no marketing allocation, no reason for anyone to be the first merchant. That makes the launch honest and makes adoption genuinely harder. Both things are true.</p>
-    <p><b>Not audited.</b> Verified against simulations, which is not the same thing, and running on a testnet with play money.</p>
+    <p><b>Nothing was allocated to bootstrap this.</b> No liquidity mining, no marketing budget, no reason to be the first merchant. That makes the launch honest and makes adoption harder, and both are true.</p>
+    <p><b>Unaudited.</b> The fee accounting is verified against a simulation of 20,000 randomized staking pools with none ever paying out more than it took in — a bug the first version had and this one doesn't. That is not the same as a professional review, and everything here is testnet play money.</p>
   </div>
 
   <h2>Try it</h2>
