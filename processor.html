@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A processor where the fee goes to the users</title>
+<meta name="description" content="Accept stablecoin payments at 2.5%, settling in one transaction — and the fee is distributed to whoever staked, not kept by a company.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#fbfbfc; --card:#ffffff; --ink:#0b0f14; --dim:#5a6570; --faint:#8b95a1;
+    --line:#e6e9ed; --line-2:#d3d9e0;
+    --brand:#0f7a6b; --brand-soft:#e6f4f1; --gold:#b5822a; --gold-soft:#fdf3e1;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-size:16px;line-height:1.65;
+    padding:26px 16px 80px;display:flex;justify-content:center;-webkit-font-smoothing:antialiased}
+  .shell{width:100%;max-width:700px}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:36px;flex-wrap:wrap}
+  .mark{font-weight:800;font-size:19px;letter-spacing:-.03em}
+  .mark i{font-style:normal;color:var(--brand)}
+  .nav{display:flex;gap:6px;flex-wrap:wrap}
+  .nav a{font-size:13px;font-weight:500;color:var(--dim);text-decoration:none;padding:6px 11px;border-radius:7px}
+  .nav a:hover,.nav a.on{background:var(--brand-soft);color:var(--brand)}
+
+  h1{font-size:clamp(32px,7vw,46px);line-height:1.05;letter-spacing:-.04em;font-weight:800;margin:0 0 16px}
+  h1 i{font-style:normal;color:var(--brand)}
+  .lede{font-size:18px;color:var(--dim);margin:0 0 12px;max-width:54ch}
+  .lede b{color:var(--ink);font-weight:600}
+
+  /* SIGNATURE: the flow */
+  .flow{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px;margin:28px 0 14px}
+  .flow-lab{font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 18px}
+  .step{display:grid;grid-template-columns:26px 1fr;gap:14px;align-items:start;padding:0 0 18px}
+  .step:last-child{padding-bottom:0}
+  .dot{width:26px;height:26px;border-radius:50%;background:var(--brand-soft);color:var(--brand);
+    display:flex;align-items:center;justify-content:center;font-family:"DM Mono",monospace;
+    font-size:11px;font-weight:500;margin-top:2px}
+  .dot.gold{background:var(--gold-soft);color:var(--gold)}
+  .step b{display:block;font-weight:700;font-size:15.5px;letter-spacing:-.01em}
+  .step span{font-size:14px;color:var(--dim)}
+  .step .amt{font-family:"DM Mono",monospace;font-weight:500;color:var(--ink)}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+    border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:28px}
+  .stats > div{background:var(--card);padding:16px 12px;text-align:center}
+  .stats dt{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 5px}
+  .stats dd{margin:0;font-family:"DM Mono",monospace;font-size:19px;font-weight:500}
+
+  h2{font-size:24px;font-weight:800;letter-spacing:-.03em;margin:44px 0 12px}
+  p.body{color:var(--dim);margin:0 0 14px;max-width:62ch}
+  p.body b{color:var(--ink);font-weight:600}
+
+  table{width:100%;border-collapse:collapse;margin:12px 0 20px;font-size:14.5px}
+  th,td{text-align:left;padding:12px 0;border-bottom:1px solid var(--line);color:var(--dim);vertical-align:top}
+  th{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--faint);font-weight:400}
+  td:first-child{color:var(--ink);font-weight:600;width:34%;padding-right:16px}
+  td.num{font-family:"DM Mono",monospace;text-align:right;width:22%}
+  .win{color:var(--brand);font-weight:600}
+
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin:20px 0}
+  .side{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .side .k{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--brand);margin:0 0 8px}
+  .side.g .k{color:var(--gold)}
+  .side h3{font-size:17px;font-weight:700;letter-spacing:-.01em;margin:0 0 7px}
+  .side p{font-size:14px;color:var(--dim);margin:0 0 14px}
+  .go{display:inline-block;font-size:14px;font-weight:600;text-decoration:none;
+    padding:9px 15px;border-radius:8px;background:var(--brand);color:#fff}
+  .go:hover{filter:brightness(1.08)}
+  .go.g{background:var(--gold)}
+
+  .plain{border-left:2px solid var(--line-2);padding:2px 0 2px 16px;margin:20px 0}
+  .plain p{font-size:14.5px;color:var(--faint);margin:0 0 12px;line-height:1.75}
+  .plain p:last-child{margin:0}
+  .plain b{color:var(--dim)}
+
+  footer{margin-top:46px;padding-top:20px;border-top:1px solid var(--line);
+    font-family:"DM Mono",monospace;font-size:11px;line-height:1.85;color:var(--faint);text-align:center}
+  footer a{color:var(--dim)}
+  a{color:var(--brand)}
+  @media (max-width:600px){ .pair{grid-template-columns:1fr} .stats{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="mark">Term<i>inal</i></div>
+    <nav class="nav">
+      <a href="./processor.html" class="on">Overview</a>
+      <a href="./terminal.html">Accept</a>
+      <a href="./interchange.html">Stake</a>
+      <a href="./processor-guide.html">How it works</a>
+    </nav>
+  </div>
+
+  <h1>Somebody takes 2.9% of every card payment. <i>It doesn't have to be a company.</i></h1>
+  <p class="lede">A processor charges a fee to run a network. That part is fair. What isn't obvious is why the fee should become profit for a corporation rather than going back to the people using the thing.</p>
+  <p class="lede"><b>Here it doesn't.</b> Every fee is distributed to whoever staked, in the same transaction it was collected.</p>
+
+  <!-- SIGNATURE: the flow -->
+  <section class="flow">
+    <p class="flow-lab">One payment, start to finish</p>
+    <div class="step">
+      <div class="dot">1</div>
+      <div><b>A customer pays <span class="amt">100.00 USDC</span></b>
+        <span>One signature. The amount shown is the amount charged — the fee comes out of it, not on top.</span></div>
+    </div>
+    <div class="step">
+      <div class="dot">2</div>
+      <div><b>The merchant receives <span class="amt">97.50</span></b>
+        <span>In that same transaction. Not tonight, not in two days — the money never stops moving long enough to be held by anyone.</span></div>
+    </div>
+    <div class="step">
+      <div class="dot gold">3</div>
+      <div><b><span class="amt">2.50</span> lands in the staking pool</b>
+        <span>Every staker's claim rises the instant it arrives. Nobody decides later what to do with it, because there is no function that could.</span></div>
+    </div>
+  </section>
+
+  <dl class="stats">
+    <div><dt>Volume processed</dt><dd id="sVol">—</dd></div>
+    <div><dt>Fees to stakers</dt><dd id="sFees">—</dd></div>
+    <div><dt>Merchants</dt><dd id="sMerch">—</dd></div>
+  </dl>
+
+  <h2>What it actually costs</h2>
+  <p class="body">Straight comparison against 2.9% + 30¢. The saving is real and it is not enormous — anyone telling you a few basis points changes your business is selling something.</p>
+  <table>
+    <tr><th>Ticket</th><th class="num">Here</th><th class="num">2.9% + 30¢</th><th class="num">You keep</th></tr>
+    <tr><td>$4 coffee</td><td class="num">0.10</td><td class="num">0.42</td><td class="num win">+0.32</td></tr>
+    <tr><td>$85 service call</td><td class="num">2.13</td><td class="num">2.77</td><td class="num win">+0.64</td></tr>
+    <tr><td>$450 repair</td><td class="num">11.25</td><td class="num">13.35</td><td class="num win">+2.10</td></tr>
+    <tr><td>$2,450 invoice</td><td class="num">61.25</td><td class="num">71.35</td><td class="num win">+10.10</td></tr>
+  </table>
+  <p class="body">The bigger difference is <b>when</b>. Card settlement is two or three days, and during those days your money is earning interest for somebody else. Here it is in the merchant's wallet before the customer has put their phone away.</p>
+
+  <h2>Two sides of the same thing</h2>
+  <div class="pair">
+    <div class="side">
+      <p class="k">Merchants</p>
+      <h3>Take payments</h3>
+      <p>Open an account in one transaction — no application, no underwriting, no approval. Share a link, get paid, keep 97.5%.</p>
+      <a class="go" href="./terminal.html">Accept payments</a>
+    </div>
+    <div class="side g">
+      <p class="k">Holders</p>
+      <h3>Take the fees</h3>
+      <p>Stake SWIPE and receive a share of every fee the network collects, in USDC. Nothing is minted to pay you — the yield is money that actually came in.</p>
+      <a class="go g" href="./interchange.html">Stake</a>
+    </div>
+  </div>
+
+  <h2>Where this is genuinely weak</h2>
+  <div class="plain">
+    <p><b>It isn't a card network.</b> No chargebacks, no disputes, no fraud screening, no identity checks, no compliance. Those are most of what a processor really sells, and none of them are here. This is only the moving-money part, which is the easy part.</p>
+    <p><b>The customer needs USDC.</b> That's the real adoption problem and no amount of contract design solves it. Until someone can pay from a card and have it arrive as stablecoin, this is for people who already hold it.</p>
+    <p><b>Percentage pricing breaks on large tickets.</b> 2.5% of a $38,000 equipment job is $950 to move a wire, which is indefensible however it compares to a card network. The rate is immutable, so the honest fix is a second deployment at a lower rate rather than an operator who can change the price.</p>
+    <p><b>SWIPE is handed out, not earned.</b> Today the operator issues it manually. Merchants earning it by volume would be a better design and a truthful pitch; that isn't what's deployed, and the page says so rather than implying otherwise.</p>
+    <p><b>Unaudited, on a testnet.</b> The fee accounting is verified against a simulation of 20,000 randomized staking pools with no pool ever paying out more than it took in — a bug the first version had. That is not a professional review.</p>
+  </div>
+
+  <footer>
+    Terminal <a href="https://testnet.arcscan.app/address/0xC168439DbFA9Ea78C32A0e3dB99eBA9284B860A3" target="_blank" rel="noopener">0xC168…60A3</a> ·
+    Interchange <a href="https://testnet.arcscan.app/address/0xa551b604bf2BEd9D52cA80e5602836B67403b98E" target="_blank" rel="noopener">0xa551…b98E</a><br>
+    Arc Testnet, chain 5042002 — both verified onchain, read the source before you trust the page.
+  </footer>
+</div>
+
+<script>
+const RPCS=["https://rpc.blockdaemon.testnet.arc.network","https://arc-testnet.drpc.org","https://rpc.quicknode.testnet.arc.network","https://5042002.rpc.thirdweb.com","https://rpc.testnet.arc.network","https://rpc.testnet.arc.io"];
+const TM="0xC168439DbFA9Ea78C32A0e3dB99eBA9284B860A3";
+const pool=RPCS.map(u=>new ethers.JsonRpcProvider(u));
+const $=id=>document.getElementById(id);
+const u6=v=>Number(ethers.formatUnits(v,6)).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+(async function(){
+  const abi=["function book() view returns (tuple(uint256 volume,uint256 feesRouted,uint256 payments,uint256 merchants,uint16 feeBps,address sink))"];
+  for(const p of pool){
+    try{
+      const b=await new ethers.Contract(TM,abi,p).book();
+      $("sVol").textContent=u6(b.volume);
+      $("sFees").textContent=u6(b.feesRouted);
+      $("sMerch").textContent=b.merchants.toString();
+      return;
+    }catch(e){}
+  }
+  ["sVol","sFees","sMerch"].forEach(k=>$(k).textContent="—");
+})();
+</script>
+</body>
+</html>
