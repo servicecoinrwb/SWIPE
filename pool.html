@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pool · SWIPE / USDC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#fbfbfc; --card:#ffffff; --ink:#0b0f14; --dim:#5a6570; --faint:#8b95a1;
+    --line:#e6e9ed; --line-2:#d3d9e0;
+    --brand:#0f7a6b; --brand-soft:#e6f4f1;
+    --lock:#b5822a; --lock-soft:#fdf3e1;
+    --warn:#b4432f; --warn-soft:#fdeeeb;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-size:15.5px;line-height:1.6;
+    padding:26px 16px 80px;display:flex;justify-content:center;-webkit-font-smoothing:antialiased}
+  .shell{width:100%;max-width:680px}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:28px;flex-wrap:wrap}
+  .mark{font-weight:800;font-size:19px;letter-spacing:-.03em}
+  .mark i{font-style:normal;color:var(--brand)}
+  .nav{display:flex;gap:6px;flex-wrap:wrap}
+  .nav a{font-size:13px;font-weight:500;color:var(--dim);text-decoration:none;padding:6px 11px;border-radius:7px}
+  .nav a:hover,.nav a.on{background:var(--brand-soft);color:var(--brand)}
+
+  h1{font-size:clamp(26px,5.6vw,34px);line-height:1.14;letter-spacing:-.03em;font-weight:800;margin:0 0 8px}
+  h1 i{font-style:normal;color:var(--brand)}
+  .lede{font-size:16px;color:var(--dim);margin:0 0 26px;max-width:54ch}
+
+  /* SIGNATURE: the price and the two sides */
+  .pool{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:14px}
+  .pool-in{padding:24px}
+  .p-lab{font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 10px}
+  .price{font-family:"DM Mono",monospace;font-weight:500;font-size:clamp(30px,8vw,44px);
+    line-height:1;letter-spacing:-.02em;margin:0}
+  .price small{font-size:13px;color:var(--faint);letter-spacing:.05em;margin-left:9px}
+  .price.none{color:var(--faint)}
+  .psub{font-size:13.5px;color:var(--dim);margin:9px 0 0}
+
+  .sides{display:flex;height:32px;border-radius:8px;overflow:hidden;margin:18px 0 0;background:#f0f2f5}
+  .sides .a{background:var(--brand);display:flex;align-items:center;padding-left:12px;
+    font-family:"DM Mono",monospace;font-size:12px;color:#fff;white-space:nowrap}
+  .sides .b{background:var(--lock);display:flex;align-items:center;justify-content:flex-end;padding-right:12px;
+    font-family:"DM Mono",monospace;font-size:12px;color:#3d2b00;white-space:nowrap}
+  .depth{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:9px;
+    font-size:12.5px;color:var(--dim)}
+  .depth b{color:var(--ink);font-weight:600}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+    border-top:1px solid var(--line)}
+  .stats > div{background:var(--card);padding:14px 12px;text-align:center}
+  .stats dt{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 4px}
+  .stats dd{margin:0;font-family:"DM Mono",monospace;font-size:15px;font-weight:500}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:14px}
+  .card h2{font-size:17px;font-weight:700;letter-spacing:-.01em;margin:0 0 4px}
+  .how{font-size:13.5px;color:var(--dim);margin:0 0 16px}
+
+  .tabs{display:flex;gap:4px;margin-bottom:16px;background:#f4f6f8;padding:4px;border-radius:10px}
+  .tab{flex:1;text-align:center;font-size:13.5px;font-weight:600;padding:8px;border-radius:7px;
+    cursor:pointer;color:var(--dim);user-select:none}
+  .tab.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--dim);margin:0 0 6px}
+  input{width:100%;font-family:"DM Mono",monospace;font-size:15px;padding:11px 13px;
+    border:1px solid var(--line-2);border-radius:9px;background:#fff;color:var(--ink);margin-bottom:12px}
+  input:focus-visible{outline:2px solid var(--brand);outline-offset:-1px;border-color:transparent}
+  input::placeholder{color:#b6bec7}
+  button{font-family:"Plus Jakarta Sans",sans-serif;font-size:14.5px;font-weight:600;border:0;border-radius:9px;
+    padding:12px 18px;cursor:pointer;width:100%;background:var(--brand);color:#fff;transition:filter .14s}
+  button:hover:not(:disabled){filter:brightness(1.08)}
+  button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  button:disabled{background:#eceff2;color:#a8b1ba;cursor:not-allowed}
+  button.ghost{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line-2)}
+  button.ghost:hover:not(:disabled){background:#f6f7f9;filter:none}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .why{font-family:"DM Mono",monospace;font-size:11.5px;line-height:1.65;color:var(--dim);margin:10px 0 0}
+  .why.warn{color:var(--warn)} .why.ok{color:var(--brand)}
+
+  .quote{background:#f6f8f9;border-radius:10px;padding:13px 15px;margin:0 0 12px;
+    font-family:"DM Mono",monospace;font-size:12.5px;color:var(--dim);line-height:1.7}
+  .quote b{color:var(--ink);font-weight:600}
+  .quote.hot{background:var(--warn-soft);color:#8a3220}
+  .quote.hot b{color:var(--warn)}
+
+  .impact{display:flex;align-items:center;gap:9px;margin-top:9px}
+  .imeter{flex:1;height:6px;border-radius:99px;background:#e6e9ed;overflow:hidden}
+  .imeter i{display:block;height:100%;background:var(--brand);transition:width .25s,background .25s}
+  .imeter i.mid{background:var(--lock)}
+  .imeter i.hot{background:var(--warn)}
+  .ipct{font-family:"DM Mono",monospace;font-size:11.5px;white-space:nowrap}
+
+  .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 0;
+    border-top:1px solid var(--line);font-size:14px}
+  .row:first-child{border-top:0}
+  .row dt{color:var(--dim);margin:0}
+  .row dd{margin:0;font-family:"DM Mono",monospace;font-weight:500}
+
+  .note{font-family:"DM Mono",monospace;font-size:11px;line-height:1.75;color:var(--faint);
+    margin-top:22px;text-align:center}
+  .note a{color:var(--dim)}
+  .disc{border-left:2px solid var(--line-2);padding:2px 0 2px 14px;margin:16px 0 0;
+    font-size:12.5px;color:var(--faint);line-height:1.7}
+  a{color:var(--brand)}
+  .hidden{display:none !important}
+  @media (max-width:560px){ .two{grid-template-columns:1fr} .stats{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="mark">Pool <i>SWIPE/USDC</i></div>
+    <nav class="nav">
+      <a href="./processor.html">Overview</a>
+      <a href="./terminal.html">Accept</a>
+      <a href="./interchange.html">Stake</a>
+      <a href="./pool.html" class="on">Pool</a>
+      <a href="./processor-guide.html">How it works</a>
+    </nav>
+  </div>
+
+  <h1>Two tokens in a box, <i>priced by their ratio.</i></h1>
+  <p class="lede">A constant-product pool. Whatever's in it sets the price, and every trade moves it. No order book, no market maker — just arithmetic and whoever put liquidity in.</p>
+
+  <!-- SIGNATURE -->
+  <section class="pool">
+    <div class="pool-in">
+      <p class="p-lab">SWIPE price</p>
+      <p class="price none" id="priceOut">—<small>USDC</small></p>
+      <p class="psub" id="priceSub">Reading the pool…</p>
+
+      <div class="sides">
+        <div class="a" id="sideA" style="width:50%">—</div>
+        <div class="b" id="sideB" style="width:50%">—</div>
+      </div>
+      <div class="depth">
+        <span>SWIPE depth <b id="dA">—</b></span>
+        <span>USDC depth <b id="dB">—</b></span>
+      </div>
+    </div>
+    <dl class="stats">
+      <div><dt>LP shares</dt><dd id="sShares">—</dd></div>
+      <div><dt>Trading fee</dt><dd id="sFee">—</dd></div>
+      <div><dt>Your share</dt><dd id="sMine">—</dd></div>
+    </dl>
+  </section>
+
+  <section class="card">
+    <div class="tabs">
+      <div class="tab on" id="tSwap">Swap</div>
+      <div class="tab" id="tAdd">Add liquidity</div>
+      <div class="tab" id="tRem">Remove</div>
+    </div>
+
+    <!-- SWAP -->
+    <div id="paneSwap">
+      <div class="two" style="margin-bottom:12px">
+        <button id="dirA" class="ghost">Sell SWIPE</button>
+        <button id="dirB" class="ghost">Sell USDC</button>
+      </div>
+      <label for="swAmt" id="swLabel">Amount to sell</label>
+      <input id="swAmt" placeholder="100" inputmode="decimal" autocomplete="off">
+      <div class="quote" id="swQuote">Enter an amount.</div>
+      <div class="impact hidden" id="swImpactWrap">
+        <div class="imeter"><i id="swImpact" style="width:0%"></i></div>
+        <span class="ipct" id="swImpactPct"></span>
+      </div>
+      <button id="swapBtn" disabled style="margin-top:12px">Swap</button>
+      <p class="why" id="swWhy"></p>
+    </div>
+
+    <!-- ADD -->
+    <div id="paneAdd" class="hidden">
+      <p class="how" id="addHow">Both sides go in at the pool's current ratio.</p>
+      <label for="adA">SWIPE</label>
+      <input id="adA" placeholder="1000" inputmode="decimal" autocomplete="off">
+      <label for="adB">USDC</label>
+      <input id="adB" placeholder="1000" inputmode="decimal" autocomplete="off">
+      <div class="quote" id="adQuote">Enter an amount.</div>
+      <button id="addBtn" disabled>Add liquidity</button>
+      <p class="why" id="adWhy"></p>
+    </div>
+
+    <!-- REMOVE -->
+    <div id="paneRem" class="hidden">
+      <p class="how">Burns shares and returns both sides, pro-rata on what the pool actually holds.</p>
+      <label for="rmAmt">LP shares to burn</label>
+      <input id="rmAmt" placeholder="0" inputmode="decimal" autocomplete="off">
+      <div class="quote" id="rmQuote">Enter an amount.</div>
+      <div class="two">
+        <button id="rmBtn" class="ghost" disabled>Remove</button>
+        <button id="rmAllBtn" class="ghost">Remove all</button>
+      </div>
+      <p class="why" id="rmWhy"></p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Your position</h2>
+    <button id="connectBtn">Connect wallet</button>
+    <dl id="posBody" class="hidden" style="margin:0">
+      <div class="row"><dt>SWIPE</dt><dd id="myA">—</dd></div>
+      <div class="row"><dt>USDC</dt><dd id="myB">—</dd></div>
+      <div class="row"><dt>LP shares</dt><dd id="myLp">—</dd></div>
+      <div class="row"><dt>Worth</dt><dd id="myWorth">—</dd></div>
+    </dl>
+    <p class="why" id="posWhy"></p>
+  </section>
+
+  <p class="note">
+    Pool <a href="https://testnet.arcscan.app/address/0x5A5CFdBCb277cAfa0cA5afA15F94B2c2e2B4ff42" target="_blank" rel="noopener">0x5A5C…ff42</a> ·
+    <a href="./interchange.html">SWIPE</a> · Arc Testnet · unaudited · play money only
+  </p>
+  <div class="disc">
+    A minimum quantity of LP shares was burned to nobody when the pool opened, so total shares can never return to zero while it holds anything. That's what stops the first depositor inflating the share price and absorbing the second one's deposit — the same failure as a vault whose price runs away when supply approaches zero.
+  </div>
+</div>
+
+<script>
+const NET={ label:"Arc Testnet", chainId:5042002,
+  rpcs:["https://rpc.blockdaemon.testnet.arc.network","https://arc-testnet.drpc.org","https://rpc.quicknode.testnet.arc.network","https://5042002.rpc.thirdweb.com"],
+  explorer:"https://testnet.arcscan.app",
+  pair:"0x5A5CFdBCb277cAfa0cA5afA15F94B2c2e2B4ff42",
+  swipe:"0xebaAe1809B2F05183Eda97e85C9fbCD74a8E5116",
+  usdc:"0x3600000000000000000000000000000000000000" };
+const PAIR=NET.pair, SWIPE=NET.swipe, USDC=NET.usdc, RPCS=NET.rpcs, CHAIN=NET.chainId;
+
+const ABI=[
+  "function pool() view returns (tuple(address token0,address token1,uint256 reserve0,uint256 reserve1,uint256 totalShares,uint256 feeBps,uint256 lockedShares))",
+  "function getReserves() view returns (uint112,uint112,uint32)",
+  "function token0() view returns (address)",
+  "function balanceOf(address) view returns (uint256)",
+  "function totalSupply() view returns (uint256)",
+  "function quoteSwap(bool,uint256) view returns (uint256 amountOut,uint256 fee,uint256 priceImpactBps)",
+  "function quoteAdd(uint256) view returns (uint256)",
+  "function shareValue(uint256) view returns (uint256,uint256)",
+  "function addLiquidity(uint256,uint256,uint256,address,uint256) returns (uint256)",
+  "function removeLiquidity(uint256,uint256,uint256,address,uint256) returns (uint256,uint256)",
+  "function swap(bool,uint256,uint256,address,uint256) returns (uint256)",
+  "error ZeroAmount()","error InsufficientLiquidityMinted()","error InsufficientLiquidityBurned()",
+  "error InsufficientLiquidity()","error InsufficientOutput()","error InsufficientInput()",
+  "error Slippage(uint256 got,uint256 wanted)","error Expired()","error Reentrant()",
+  "error InvariantBroken(uint256 kBefore,uint256 kAfter)",
+  "error InsufficientBalance(uint256 have,uint256 want)"
+];
+const ERC=[
+  "function approve(address,uint256) returns (bool)",
+  "function allowance(address,address) view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)"
+];
+const IFACE=new ethers.Interface(ABI);
+const ARC={chainId:"0x"+CHAIN.toString(16),chainName:NET.label,
+  nativeCurrency:{name:"USDC",symbol:"USDC",decimals:18},rpcUrls:RPCS,blockExplorerUrls:[NET.explorer]};
+
+const $=id=>document.getElementById(id);
+const f18=v=>Number(ethers.formatUnits(v,18)).toLocaleString("en-US",{maximumFractionDigits:4});
+const f6=v=>Number(ethers.formatUnits(v,6)).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:6});
+const p18=s=>ethers.parseUnits(s,18);
+const p6=s=>ethers.parseUnits(s,6);
+const DL=()=>Math.floor(Date.now()/1000)+900;
+
+const pool=RPCS.map(u=>new ethers.JsonRpcProvider(u));
+let wp=null;
+const readers=()=>wp?[wp,...pool]:pool;
+async function rd(addr,abi,fn){ let e; for(const p of readers()){ try{ return await fn(new ethers.Contract(addr,abi,p)); }catch(x){e=x;} } throw e; }
+
+let signer=null,me=null,P=null,sw0=true,tab="swap";
+let balA=0n,balB=0n,balLp=0n,alA=0n,alB=0n;
+/* Token order is decided by the contract, not by us — it sorts by address.
+   Everything below works in "A = SWIPE, B = USDC" terms and maps at the edge. */
+let swipeIsToken0=true;
+
+async function loadPool(){
+  try{
+    const p=await rd(PAIR,ABI,c=>c.pool());
+    swipeIsToken0 = p.token0.toLowerCase()===SWIPE.toLowerCase();
+    P={ rSwipe: swipeIsToken0 ? p.reserve0 : p.reserve1,
+        rUsdc:  swipeIsToken0 ? p.reserve1 : p.reserve0,
+        shares: p.totalShares, feeBps: Number(p.feeBps), locked: p.lockedShares };
+    render();
+  }catch(e){ console.error(e); $("priceSub").textContent="Couldn't reach the pool — public RPCs throttle under load. Reload in a moment."; }
+}
+
+function render(){
+  const empty = P.rSwipe===0n || P.rUsdc===0n;
+  $("sFee").textContent=(P.feeBps/100).toFixed(2)+"%";
+  $("sShares").textContent=f18(P.shares);
+
+  if(empty){
+    $("priceOut").className="price none";
+    $("priceOut").innerHTML='—<small>USDC</small>';
+    $("priceSub").textContent="The pool is empty. Whoever adds liquidity first sets the opening price by the ratio they choose — it's the only free choice anyone gets here.";
+    $("sideA").style.width="50%"; $("sideB").style.width="50%";
+    $("sideA").textContent="—"; $("sideB").textContent="—";
+    $("dA").textContent="0"; $("dB").textContent="0";
+  } else {
+    const price=Number(ethers.formatUnits(P.rUsdc,6))/Number(ethers.formatUnits(P.rSwipe,18));
+    $("priceOut").className="price";
+    $("priceOut").innerHTML=price.toLocaleString("en-US",{maximumFractionDigits:6})+'<small>USDC</small>';
+    $("priceSub").textContent="Set entirely by what's in the pool. Every trade moves it, and a big trade moves it a lot.";
+    // both sides are equal in value by construction, so show depth not value
+    $("sideA").style.width="50%"; $("sideB").style.width="50%";
+    $("sideA").textContent=f18(P.rSwipe)+" SWIPE";
+    $("sideB").textContent=f6(P.rUsdc)+" USDC";
+    $("dA").textContent=f18(P.rSwipe);
+    $("dB").textContent=f6(P.rUsdc);
+  }
+
+  $("addHow").textContent = empty
+    ? "The pool is empty, so you choose the ratio — and that ratio is the opening price. Put in 1000 SWIPE against 100 USDC and SWIPE opens at ten cents."
+    : "Both sides go in at the pool's current ratio. Type one and the other fills itself.";
+
+  if(me){
+    $("sMine").textContent = P.shares>0n ? ((Number(balLp)/Number(P.shares))*100).toFixed(2)+"%" : "—";
+    $("posBody").classList.remove("hidden");
+    $("myA").textContent=f18(balA)+" SWIPE";
+    $("myB").textContent=f6(balB)+" USDC";
+    $("myLp").textContent=f18(balLp);
+    if(balLp>0n && P.shares>0n){
+      const a=(balLp*P.rSwipe)/P.shares, b=(balLp*P.rUsdc)/P.shares;
+      $("myWorth").textContent=f18(a)+" SWIPE + "+f6(b)+" USDC";
+    } else $("myWorth").textContent="—";
+    $("posWhy").textContent = balA===0n
+      ? "You hold no SWIPE. It's only minted by processing a payment — take one on the Accept page and it appears."
+      : "";
+  }
+  quoteSwap(); quoteAdd(); quoteRemove();
+}
+
+async function loadBalances(){
+  if(!me) return;
+  try{
+    balA=await rd(SWIPE,ERC,c=>c.balanceOf(me));
+    balB=await rd(USDC,ERC,c=>c.balanceOf(me));
+    balLp=await rd(PAIR,ABI,c=>c.balanceOf(me));
+    alA=await rd(SWIPE,ERC,c=>c.allowance(me,PAIR));
+    alB=await rd(USDC,ERC,c=>c.allowance(me,PAIR));
+  }catch(_){}
+}
+
+/* ---------------- tabs ---------------- */
+function setTab(t){
+  tab=t;
+  $("tSwap").classList.toggle("on",t==="swap");
+  $("tAdd").classList.toggle("on",t==="add");
+  $("tRem").classList.toggle("on",t==="rem");
+  $("paneSwap").classList.toggle("hidden",t!=="swap");
+  $("paneAdd").classList.toggle("hidden",t!=="add");
+  $("paneRem").classList.toggle("hidden",t!=="rem");
+}
+$("tSwap").onclick=()=>setTab("swap");
+$("tAdd").onclick=()=>setTab("add");
+$("tRem").onclick=()=>setTab("rem");
+
+$("dirA").onclick=()=>{ sw0=true; setDir(); };
+$("dirB").onclick=()=>{ sw0=false; setDir(); };
+function setDir(){
+  $("dirA").className = sw0 ? "" : "ghost";
+  $("dirB").className = sw0 ? "ghost" : "";
+  $("swLabel").textContent = sw0 ? "SWIPE to sell" : "USDC to sell";
+  quoteSwap();
+}
+setDir();
+
+/* ---------------- quotes ---------------- */
+async function quoteSwap(){
+  if(!P) return;
+  const v=$("swAmt").value.trim();
+  if(!v||isNaN(v)||Number(v)<=0){
+    $("swQuote").className="quote"; $("swQuote").textContent="Enter an amount.";
+    $("swImpactWrap").classList.add("hidden"); $("swapBtn").disabled=true; return;
+  }
+  if(P.rSwipe===0n||P.rUsdc===0n){
+    $("swQuote").className="quote hot";
+    $("swQuote").textContent="The pool is empty — there's nothing to trade against. Add liquidity first.";
+    $("swapBtn").disabled=true; return;
+  }
+  let amt; try{ amt = sw0 ? p18(v) : p6(v); }catch{ return; }
+  const have = sw0 ? balA : balB;
+  if(me && amt>have){
+    $("swQuote").className="quote hot";
+    $("swQuote").innerHTML="You hold <b>"+(sw0?f18(balA)+" SWIPE":f6(balB)+" USDC")+"</b> — less than that.";
+    $("swapBtn").disabled=true; return;
+  }
+  try{
+    // contract's zeroForOne is in token0 terms; map from our A/B view
+    const zfo = sw0 ? swipeIsToken0 : !swipeIsToken0;
+    const q=await rd(PAIR,ABI,c=>c.quoteSwap(zfo,amt));
+    const out=q[0], fee=q[1], imp=Number(q[2])/100;
+    const outStr = sw0 ? f6(out)+" USDC" : f18(out)+" SWIPE";
+    const feeStr = sw0 ? f18(fee)+" SWIPE" : f6(fee)+" USDC";
+    const hot = imp>=5;
+    $("swQuote").className="quote"+(hot?" hot":"");
+    $("swQuote").innerHTML="You'd receive <b>"+outStr+"</b>, after a <b>"+feeStr+"</b> fee to the liquidity providers."+
+      (hot?" That's a big trade for this pool — the price moves against you as it fills.":"");
+    $("swImpactWrap").classList.remove("hidden");
+    const bar=$("swImpact");
+    bar.style.width=Math.min(100,imp*4)+"%";
+    bar.className = imp>=5?"hot":imp>=1?"mid":"";
+    $("swImpactPct").textContent=imp.toFixed(2)+"% impact";
+    $("swImpactPct").style.color = imp>=5?"var(--warn)":imp>=1?"var(--lock)":"var(--dim)";
+    $("swapBtn").disabled=!signer;
+    $("swapBtn").textContent = !signer ? "Connect wallet"
+      : ((sw0?alA:alB)<amt ? "Approve, then swap" : "Swap");
+  }catch(e){ console.error(e); }
+}
+$("swAmt").addEventListener("input",quoteSwap);
+
+let adLock=false;
+async function quoteAdd(){
+  if(!P||adLock) return;
+  const a=$("adA").value.trim();
+  if(!a||isNaN(a)||Number(a)<=0){
+    $("adQuote").className="quote";
+    $("adQuote").textContent = P&&P.rSwipe===0n
+      ? "Enter both sides. The ratio you choose becomes the opening price."
+      : "Enter an amount.";
+    $("addBtn").disabled=true; return;
+  }
+  if(P.rSwipe>0n){
+    try{
+      const need=await rd(PAIR,ABI,c=>c.quoteAdd(swipeIsToken0?p18(a):p18(a)));
+      // quoteAdd is in token0 terms; when SWIPE is token1 we invert
+      let other;
+      if(swipeIsToken0){ other=need; }
+      else { other=(p18(a)*P.rUsdc)/P.rSwipe; }
+      adLock=true; $("adB").value=ethers.formatUnits(other,6); adLock=false;
+      $("adQuote").className="quote";
+      $("adQuote").innerHTML="Pairs <b>"+a+" SWIPE</b> with <b>"+f6(other)+" USDC</b> at the pool's current ratio. Excess on either side is kept by the pool, so use these numbers.";
+    }catch(e){ console.error(e); }
+  } else {
+    const b=$("adB").value.trim();
+    if(!b||isNaN(b)||Number(b)<=0){ $("addBtn").disabled=true; return; }
+    const price=Number(b)/Number(a);
+    $("adQuote").className="quote";
+    $("adQuote").innerHTML="Opens SWIPE at <b>"+price.toLocaleString("en-US",{maximumFractionDigits:6})+" USDC</b>. Nobody can change that afterwards except by trading against it.";
+  }
+  $("addBtn").disabled=!signer;
+  $("addBtn").textContent = signer ? "Add liquidity" : "Connect wallet";
+}
+$("adA").addEventListener("input",quoteAdd);
+$("adB").addEventListener("input",()=>{ if(P&&P.rSwipe===0n) quoteAdd(); });
+
+function quoteRemove(){
+  if(!P) return;
+  const v=$("rmAmt").value.trim();
+  if(!v||isNaN(v)||Number(v)<=0){ $("rmQuote").textContent="Enter an amount."; $("rmBtn").disabled=true; return; }
+  let s; try{ s=p18(v); }catch{ return; }
+  if(s>balLp){ $("rmQuote").innerHTML="You hold <b>"+f18(balLp)+"</b> shares."; $("rmBtn").disabled=true; return; }
+  if(P.shares===0n) return;
+  const a=(s*P.rSwipe)/P.shares, b=(s*P.rUsdc)/P.shares;
+  $("rmQuote").innerHTML="Returns <b>"+f18(a)+" SWIPE</b> and <b>"+f6(b)+" USDC</b>.";
+  $("rmBtn").disabled=!signer;
+}
+$("rmAmt").addEventListener("input",quoteRemove);
+$("rmAllBtn").onclick=()=>{ $("rmAmt").value=ethers.formatUnits(balLp,18); quoteRemove(); };
+
+/* ---------------- connect ---------------- */
+(async function boot(){
+  await loadPool();
+  if(!window.ethereum) return;
+  try{ const a=await window.ethereum.request({method:"eth_accounts"}); if(a&&a.length) await connect(true); }catch(_){}
+})();
+$("connectBtn").onclick=()=>connect(false);
+
+async function connect(silent){
+  if(!window.ethereum){
+    if(!silent){ $("posWhy").textContent="No wallet in this browser."; $("posWhy").className="why warn"; }
+    return;
+  }
+  try{
+    if(!silent) await window.ethereum.request({method:"eth_requestAccounts"});
+    const n=await window.ethereum.request({method:"eth_chainId"});
+    if(parseInt(n,16)!==CHAIN){
+      try{ await window.ethereum.request({method:"wallet_switchEthereumChain",params:[{chainId:ARC.chainId}]}); }
+      catch(e){ if(e.code===4902) await window.ethereum.request({method:"wallet_addEthereumChain",params:[ARC]}); else throw e; }
+    }
+    const bp=new ethers.BrowserProvider(window.ethereum);
+    wp=bp; signer=await bp.getSigner(); me=await signer.getAddress();
+    $("connectBtn").classList.add("hidden");
+    await loadBalances(); await loadPool();
+  }catch(e){
+    if(!silent){ $("posWhy").textContent="Wallet didn't connect: "+(e.shortMessage||e.message); $("posWhy").className="why warn"; }
+  }
+}
+
+/* ---------------- write ---------------- */
+const ERRS={
+  ZeroAmount:"Amount can't be zero.",
+  InsufficientLiquidityMinted:"Too small to open a pool — the first deposit has to clear the burned minimum.",
+  InsufficientLiquidityBurned:"That many shares round to nothing on one side.",
+  InsufficientLiquidity:"The pool doesn't hold enough for that trade.",
+  InsufficientOutput:"That would return nothing.",
+  InsufficientInput:"Nothing arrived.",
+  Slippage:"The price moved past your limit. Nothing happened — try again.",
+  Expired:"Took too long and the deadline passed.",
+  InvariantBroken:"The pool refused the trade — its own invariant check failed.",
+  InsufficientBalance:"You don't hold that much."
+};
+function why(e){
+  const m=e.shortMessage||e.message||"";
+  if(m.includes("rejected")||e?.code==="ACTION_REJECTED") return "You rejected the signature. Nothing happened.";
+  let r=e?.revert;
+  if(!r){ const d=e?.data||e?.info?.error?.data||e?.error?.data;
+    if(typeof d==="string"){ try{ r=IFACE.parseError(d); }catch(_){} } }
+  if(r&&ERRS[r.name]) return ERRS[r.name];
+  if(r) return "Reverted: "+r.name;
+  if(m.includes("insufficient funds")) return "Not enough USDC to cover gas.";
+  return "Failed: "+m;
+}
+async function ensure(token,amt,cur,btn){
+  if(cur>=amt) return cur;
+  btn.textContent="Approve…";
+  const t=new ethers.Contract(token,ERC,signer);
+  await (await t.approve(PAIR,amt)).wait();
+  return amt;
+}
+
+$("swapBtn").onclick=async()=>{
+  const b=$("swapBtn"); b.disabled=true;
+  try{
+    const v=$("swAmt").value.trim();
+    const amt = sw0 ? p18(v) : p6(v);
+    if(sw0) alA=await ensure(SWIPE,amt,alA,b); else alB=await ensure(USDC,amt,alB,b);
+    b.textContent="Swapping…";
+    const zfo = sw0 ? swipeIsToken0 : !swipeIsToken0;
+    // 1% slippage floor off the quote
+    const q=await rd(PAIR,ABI,c=>c.quoteSwap(zfo,amt));
+    const minOut=(q[0]*99n)/100n;
+    const c=new ethers.Contract(PAIR,ABI,signer);
+    await (await c.swap(zfo,amt,minOut,me,DL())).wait();
+    $("swAmt").value="";
+    await loadBalances(); await loadPool();
+    $("swWhy").textContent="Swapped."; $("swWhy").className="why ok";
+  }catch(e){ $("swWhy").textContent=why(e); $("swWhy").className="why warn"; }
+  finally{ b.disabled=false; quoteSwap(); }
+};
+
+$("addBtn").onclick=async()=>{
+  const b=$("addBtn"); b.disabled=true;
+  try{
+    const a=p18($("adA").value.trim()), bb=p6($("adB").value.trim());
+    alA=await ensure(SWIPE,a,alA,b);
+    alB=await ensure(USDC,bb,alB,b);
+    b.textContent="Adding…";
+    const c=new ethers.Contract(PAIR,ABI,signer);
+    const [a0,a1] = swipeIsToken0 ? [a,bb] : [bb,a];
+    await (await c.addLiquidity(a0,a1,0,me,DL())).wait();
+    $("adA").value=""; $("adB").value="";
+    await loadBalances(); await loadPool();
+    $("adWhy").textContent="Added. You hold LP shares now — they earn a cut of every trade."; $("adWhy").className="why ok";
+  }catch(e){ $("adWhy").textContent=why(e); $("adWhy").className="why warn"; }
+  finally{ b.disabled=false; quoteAdd(); }
+};
+
+$("rmBtn").onclick=async()=>{
+  const b=$("rmBtn"); b.disabled=true; b.textContent="Removing…";
+  try{
+    const s=p18($("rmAmt").value.trim());
+    const c=new ethers.Contract(PAIR,ABI,signer);
+    await (await c.removeLiquidity(s,0,0,me,DL())).wait();
+    $("rmAmt").value="";
+    await loadBalances(); await loadPool();
+    $("rmWhy").textContent="Removed."; $("rmWhy").className="why ok";
+  }catch(e){ $("rmWhy").textContent=why(e); $("rmWhy").className="why warn"; }
+  finally{ b.disabled=false; b.textContent="Remove"; quoteRemove(); }
+};
+</script>
+</body>
+</html>
