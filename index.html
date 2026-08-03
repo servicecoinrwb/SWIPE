@@ -3,192 +3,279 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>A processor where the fee goes to the users</title>
-<meta name="description" content="Accept stablecoin payments at 2.5%, settling in one transaction — and the fee is distributed to whoever staked, not kept by a company.">
+<title>SWIPE — payments where the fee goes to the users</title>
+<meta name="description" content="Accept stablecoin payments that settle in one transaction. The fee goes to whoever staked, not to a company. Supply started at zero.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
 <style>
+  /* ============================================================
+     A front door, not a document. The processor page explains;
+     this one asserts. Big type, few words, one thing to do —
+     and a dark hero so the light body reads as a second breath.
+     ============================================================ */
   :root{
-    --bg:#fbfbfc; --card:#ffffff; --ink:#0b0f14; --dim:#5a6570; --faint:#8b95a1;
-    --line:#e6e9ed; --line-2:#d3d9e0;
-    --brand:#0f7a6b; --brand-soft:#e6f4f1; --gold:#b5822a; --gold-soft:#fdf3e1;
+    --ink:#08090b;
+    --ink-2:#101317;
+    --paper:#fbfbfc;
+    --white:#fff;
+    --dim:#5a6570;
+    --faint:#8b95a1;
+    --line:#e6e9ed;
+    --brand:#12b39a;
+    --brand-deep:#0f7a6b;
+    --gold:#e0a33c;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
-  body{background:var(--bg);color:var(--ink);
-    font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-size:16px;line-height:1.65;
-    padding:26px 16px 80px;display:flex;justify-content:center;-webkit-font-smoothing:antialiased}
-  .shell{width:100%;max-width:700px}
+  html{scroll-behavior:smooth}
+  body{background:var(--paper);color:var(--ink);
+    font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-size:17px;line-height:1.6;
+    -webkit-font-smoothing:antialiased}
 
-  .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:36px;flex-wrap:wrap}
-  .mark{font-weight:800;font-size:19px;letter-spacing:-.03em}
-  .mark i{font-style:normal;color:var(--brand)}
-  .nav{display:flex;gap:6px;flex-wrap:wrap}
-  .nav a{font-size:13px;font-weight:500;color:var(--dim);text-decoration:none;padding:6px 11px;border-radius:7px}
-  .nav a:hover,.nav a.on{background:var(--brand-soft);color:var(--brand)}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 28px}
 
-  h1{font-size:clamp(32px,7vw,46px);line-height:1.05;letter-spacing:-.04em;font-weight:800;margin:0 0 16px}
-  h1 i{font-style:normal;color:var(--brand)}
-  .lede{font-size:18px;color:var(--dim);margin:0 0 12px;max-width:54ch}
-  .lede b{color:var(--ink);font-weight:600}
+  /* ---------------- hero ---------------- */
+  .hero{background:var(--ink);color:var(--white);padding:22px 0 96px;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;left:50%;top:-360px;width:900px;height:900px;
+    transform:translateX(-50%);pointer-events:none;
+    background:radial-gradient(circle,rgba(18,179,154,.16),transparent 62%)}
+  .hero .wrap{position:relative}
 
-  /* SIGNATURE: the flow */
-  .flow{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px;margin:28px 0 14px}
-  .flow-lab{font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;
-    color:var(--faint);margin:0 0 18px}
-  .step{display:grid;grid-template-columns:26px 1fr;gap:14px;align-items:start;padding:0 0 18px}
-  .step:last-child{padding-bottom:0}
-  .dot{width:26px;height:26px;border-radius:50%;background:var(--brand-soft);color:var(--brand);
-    display:flex;align-items:center;justify-content:center;font-family:"DM Mono",monospace;
-    font-size:11px;font-weight:500;margin-top:2px}
-  .dot.gold{background:var(--gold-soft);color:var(--gold)}
-  .step b{display:block;font-weight:700;font-size:15.5px;letter-spacing:-.01em}
-  .step span{font-size:14px;color:var(--dim)}
-  .step .amt{font-family:"DM Mono",monospace;font-weight:500;color:var(--ink)}
+  nav{display:flex;align-items:center;justify-content:space-between;gap:20px;
+    padding:14px 0 0;flex-wrap:wrap}
+  .logo{font-weight:800;font-size:19px;letter-spacing:-.04em}
+  .logo i{font-style:normal;color:var(--brand)}
+  .links{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+  .links a{font-size:14px;font-weight:500;color:rgba(255,255,255,.62);text-decoration:none;
+    padding:8px 13px;border-radius:8px;transition:color .15s,background .15s}
+  .links a:hover{color:#fff;background:rgba(255,255,255,.07)}
+  .links a.cta{background:var(--brand);color:#04211c;font-weight:700}
+  .links a.cta:hover{background:#16c9ae}
 
-  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
-    border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:28px}
-  .stats > div{background:var(--card);padding:16px 12px;text-align:center}
-  .stats dt{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
-    color:var(--faint);margin:0 0 5px}
-  .stats dd{margin:0;font-family:"DM Mono",monospace;font-size:19px;font-weight:500}
+  h1{font-size:clamp(42px,7.4vw,84px);line-height:.98;letter-spacing:-.045em;
+    font-weight:800;margin:76px 0 0;max-width:16ch}
+  h1 em{font-style:normal;color:var(--brand)}
+  .sub{font-size:clamp(17px,2.2vw,21px);color:rgba(255,255,255,.62);
+    margin:26px 0 0;max-width:46ch;line-height:1.5}
 
-  h2{font-size:24px;font-weight:800;letter-spacing:-.03em;margin:44px 0 12px}
-  p.body{color:var(--dim);margin:0 0 14px;max-width:62ch}
-  p.body b{color:var(--ink);font-weight:600}
+  .acts{display:flex;gap:12px;margin-top:38px;flex-wrap:wrap}
+  .btn{display:inline-block;font-size:15.5px;font-weight:700;text-decoration:none;
+    padding:15px 26px;border-radius:11px;background:var(--brand);color:#04211c;transition:transform .12s,background .15s}
+  .btn:hover{background:#16c9ae;transform:translateY(-1px)}
+  .btn.ghost{background:transparent;color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
+  .btn.ghost:hover{background:rgba(255,255,255,.07)}
 
-  table{width:100%;border-collapse:collapse;margin:12px 0 20px;font-size:14.5px}
-  th,td{text-align:left;padding:12px 0;border-bottom:1px solid var(--line);color:var(--dim);vertical-align:top}
-  th{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
-    color:var(--faint);font-weight:400}
-  td:first-child{color:var(--ink);font-weight:600;width:34%;padding-right:16px}
-  td.num{font-family:"DM Mono",monospace;text-align:right;width:22%}
-  .win{color:var(--brand);font-weight:600}
+  /* live ticker */
+  .ticker{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
+    background:rgba(255,255,255,.09);border-radius:14px;overflow:hidden;margin-top:64px}
+  .ticker > div{background:var(--ink-2);padding:20px 18px}
+  .ticker dt{font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.14em;
+    text-transform:uppercase;color:rgba(255,255,255,.38);margin:0 0 7px}
+  .ticker dd{margin:0;font-family:"DM Mono",monospace;font-size:clamp(19px,2.6vw,25px);
+    font-weight:500;letter-spacing:-.02em}
+  .ticker .g{color:var(--brand)}
 
-  .pair{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin:20px 0}
-  .side{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
-  .side .k{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;
-    color:var(--brand);margin:0 0 8px}
-  .side.g .k{color:var(--gold)}
-  .side h3{font-size:17px;font-weight:700;letter-spacing:-.01em;margin:0 0 7px}
-  .side p{font-size:14px;color:var(--dim);margin:0 0 14px}
-  .go{display:inline-block;font-size:14px;font-weight:600;text-decoration:none;
-    padding:9px 15px;border-radius:8px;background:var(--brand);color:#fff}
-  .go:hover{filter:brightness(1.08)}
-  .go.g{background:var(--gold)}
+  /* ---------------- body ---------------- */
+  section{padding:96px 0}
+  .eyebrow{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--brand-deep);margin:0 0 16px}
+  h2{font-size:clamp(30px,4.4vw,46px);line-height:1.04;letter-spacing:-.04em;
+    font-weight:800;margin:0 0 20px;max-width:18ch}
+  h2 em{font-style:normal;color:var(--brand-deep)}
+  .lead{font-size:19px;color:var(--dim);margin:0;max-width:52ch;line-height:1.55}
 
-  .plain{border-left:2px solid var(--line-2);padding:2px 0 2px 16px;margin:20px 0}
-  .plain p{font-size:14.5px;color:var(--faint);margin:0 0 12px;line-height:1.75}
-  .plain p:last-child{margin:0}
-  .plain b{color:var(--dim)}
+  /* the one number that makes the case */
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:48px}
+  .cbox{border-radius:16px;padding:30px}
+  .cbox.them{background:var(--white);border:1px solid var(--line)}
+  .cbox.us{background:var(--ink);color:#fff}
+  .cbox .who{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--faint);margin:0 0 14px}
+  .cbox.us .who{color:rgba(255,255,255,.4)}
+  .cbox .amt{font-family:"DM Mono",monospace;font-size:clamp(34px,5.4vw,52px);
+    font-weight:500;line-height:1;letter-spacing:-.03em;margin:0}
+  .cbox.us .amt{color:var(--brand)}
+  .cbox .cap{font-size:14.5px;color:var(--dim);margin:14px 0 0}
+  .cbox.us .cap{color:rgba(255,255,255,.55)}
+  .cnote{font-size:15px;color:var(--faint);margin:20px 0 0;max-width:56ch}
 
-  footer{margin-top:46px;padding-top:20px;border-top:1px solid var(--line);
-    font-family:"DM Mono",monospace;font-size:11px;line-height:1.85;color:var(--faint);text-align:center}
-  footer a{color:var(--dim)}
-  a{color:var(--brand)}
-  @media (max-width:600px){ .pair{grid-template-columns:1fr} .stats{grid-template-columns:1fr} }
+  /* three things */
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:52px}
+  .card{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:28px}
+  .card .n{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.14em;
+    color:var(--brand-deep);margin:0 0 16px}
+  .card h3{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0 0 9px}
+  .card p{font-size:15px;color:var(--dim);margin:0;line-height:1.55}
+
+  /* two paths */
+  .paths{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:48px}
+  .path{border-radius:16px;padding:32px;background:var(--white);border:1px solid var(--line)}
+  .path.g{background:#fffaf0;border-color:#f0e2c4}
+  .path .k{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--brand-deep);margin:0 0 12px}
+  .path.g .k{color:#a8751f}
+  .path h3{font-size:24px;font-weight:800;letter-spacing:-.03em;margin:0 0 10px}
+  .path p{font-size:15.5px;color:var(--dim);margin:0 0 22px;line-height:1.55}
+  .path a{display:inline-block;font-size:15px;font-weight:700;text-decoration:none;
+    padding:12px 20px;border-radius:10px;background:var(--ink);color:#fff}
+  .path a:hover{background:var(--ink-2)}
+  .path.g a{background:#b5822a}
+
+  /* closing */
+  .close{background:var(--ink);color:#fff;border-radius:20px;padding:64px 44px;margin:0 0 96px;text-align:center}
+  .close h2{margin:0 auto 18px;max-width:20ch;color:#fff}
+  .close p{font-size:18px;color:rgba(255,255,255,.6);margin:0 auto 32px;max-width:44ch}
+  .close .acts{justify-content:center}
+
+  footer{border-top:1px solid var(--line);padding:32px 0 60px}
+  .fgrid{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;
+    font-family:"DM Mono",monospace;font-size:11.5px;color:var(--faint);line-height:1.9}
+  footer a{color:var(--dim);text-decoration:none}
+  footer a:hover{color:var(--ink)}
+
+  @media (max-width:860px){
+    .ticker{grid-template-columns:1fr 1fr}
+    .grid3{grid-template-columns:1fr}
+    .compare,.paths{grid-template-columns:1fr}
+    section{padding:68px 0}
+    h1{margin-top:52px}
+  }
 </style>
 </head>
 <body>
-<div class="shell">
 
-  <div class="topbar">
-    <div class="mark">Term<i>inal</i></div>
-    <nav class="nav">
-      <a href="./processor.html" class="on">Overview</a>
-      <a href="./terminal.html">Accept</a>
-      <a href="./interchange.html">Stake</a>
-      <a href="./pool.html">Pool</a>
-      <a href="./processor-guide.html">How it works</a>
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="wrap">
+    <nav>
+      <div class="logo">SW<i>IPE</i></div>
+      <div class="links">
+        <a href="#how">How it works</a>
+        <a href="./processor-guide.html">Docs</a>
+        <a href="./pool.html">Buy</a>
+        <a href="./terminal.html" class="cta">Accept payments</a>
+      </div>
     </nav>
+
+    <h1>The fee shouldn't go to <em>a company.</em></h1>
+    <p class="sub">Take stablecoin payments that settle in one transaction. Every fee is paid out to whoever staked — and the token they stake started at zero, minted only by merchants processing payments.</p>
+
+    <div class="acts">
+      <a class="btn" href="./terminal.html">Start accepting →</a>
+      <a class="btn ghost" href="./interchange.html">Stake and earn</a>
+    </div>
+
+    <dl class="ticker">
+      <div><dt>Processed</dt><dd id="tVol">—</dd></div>
+      <div><dt>Paid to stakers</dt><dd class="g" id="tFees">—</dd></div>
+      <div><dt>SWIPE supply</dt><dd id="tSupply">—</dd></div>
+      <div><dt>Merchants</dt><dd id="tMerch">—</dd></div>
+    </dl>
   </div>
+</header>
 
-  <h1>Somebody takes 2.9% of every card payment. <i>It doesn't have to be a company.</i></h1>
-  <p class="lede">A processor charges a fee to run a network. That part is fair. What isn't obvious is why the fee should become profit for a corporation rather than going back to the people who generated it.</p>
-  <p class="lede"><b>Here it doesn't.</b> Every fee goes to stakers in the transaction it was collected — and the token they stake started at zero supply, with every unit minted by a merchant processing a payment. Nobody was allocated any, including whoever deployed it.</p>
+<!-- ============ THE NUMBER ============ -->
+<section id="how">
+  <div class="wrap">
+    <p class="eyebrow">The case, in one number</p>
+    <h2>A $38,000 job. <em>Two ways to get paid.</em></h2>
+    <p class="lead">Card processors charge a flat percentage no matter the size, which stops making sense somewhere around the third zero.</p>
 
-  <!-- SIGNATURE: the flow -->
-  <section class="flow">
-    <p class="flow-lab">One payment, start to finish</p>
-    <div class="step">
-      <div class="dot">1</div>
-      <div><b>A customer pays <span class="amt">100.00 USDC</span></b>
-        <span>One signature. The amount shown is the amount charged — the fee comes out of it, not on top.</span></div>
+    <div class="compare">
+      <div class="cbox them">
+        <p class="who">A card at 2.9% + 30¢</p>
+        <p class="amt">$1,102</p>
+        <p class="cap">Gone. And you wait two or three days for the rest.</p>
+      </div>
+      <div class="cbox us">
+        <p class="who">Here</p>
+        <p class="amt">$140</p>
+        <p class="cap">In your wallet before the customer puts their phone away.</p>
+      </div>
     </div>
-    <div class="step">
-      <div class="dot">2</div>
-      <div><b>The merchant receives <span class="amt">97.50</span></b>
-        <span>In that same transaction. Not tonight, not in two days — the money never stops moving long enough to be held by anyone.</span></div>
-    </div>
-    <div class="step">
-      <div class="dot gold">3</div>
-      <div><b><span class="amt">2.50</span> lands in the staking pool</b>
-        <span>Every staker's claim rises the instant it arrives. Nobody decides later what to do with it, because there is no function that could.</span></div>
-    </div>
-    <div class="step">
-      <div class="dot gold">4</div>
-      <div><b>The merchant is minted <span class="amt">100 SWIPE</span></b>
-        <span>One per dollar processed. This is the only way supply is ever created — there is no premine, no treasury, and no issuance function for anyone to call.</span></div>
-    </div>
-    <div class="step">
-      <div class="dot gold">5</div>
-      <div><b>Stakers are emitted <span class="amt">2.50 esSWIPE</span></b>
-        <span>Alongside the USDC, at a fixed ratio to the fee. Emissions track payments rather than a clock, so a quiet month emits nothing and there is no schedule to front-run.</span></div>
-    </div>
-  </section>
+    <p class="cnote">The fee is charged in brackets, like tax — 2.5% on the first $500, 1% to $5,000, a quarter percent above. Each rate applies only to the slice inside it, so the effective rate falls as the ticket grows and never jumps.</p>
+  </div>
+</section>
 
-  <dl class="stats">
-    <div><dt>Volume processed</dt><dd id="sVol">—</dd></div>
-    <div><dt>Fees to stakers</dt><dd id="sFees">—</dd></div>
-    <div><dt>Merchants</dt><dd id="sMerch">—</dd></div>
-  </dl>
-  <p class="body" style="margin-top:-18px;font-family:'DM Mono',monospace;font-size:12px;color:var(--faint)" id="earnLine"></p>
-
-  <h2>The fee falls as the ticket grows</h2>
-  <p class="body">Charged in brackets, like tax — 2.5% on the first $500, 1% up to $5,000, a quarter percent above that. Each rate applies only to the slice inside it, so the effective rate declines smoothly and a bigger payment never costs less in absolute terms than a smaller one.</p>
-  <table>
-    <tr><th>Ticket</th><th class="num">Here</th><th class="num">Effective</th><th class="num">2.9% + 30¢</th><th class="num">You keep</th></tr>
-    <tr><td>$85 service call</td><td class="num">2.13</td><td class="num">2.50%</td><td class="num">2.77</td><td class="num win">+0.64</td></tr>
-    <tr><td>$450 repair</td><td class="num">11.25</td><td class="num">2.50%</td><td class="num">13.35</td><td class="num win">+2.10</td></tr>
-    <tr><td>$2,450 invoice</td><td class="num">32.00</td><td class="num">1.31%</td><td class="num">71.35</td><td class="num win">+39.35</td></tr>
-    <tr><td>$38,000 changeout</td><td class="num">140.00</td><td class="num">0.37%</td><td class="num">1,102.30</td><td class="num win">+962.30</td></tr>
-  </table>
-  <p class="body">A flat percentage is indefensible at scale — 2.5% of a thirty-eight thousand dollar job is $950 to move a wire. Here it's $140, and against a card it's a difference worth having rather than a rounding argument.</p>
-  <p class="body">The other difference is <b>when</b>. Card settlement takes two or three days, and during those days your money earns interest for somebody else. Here it's in the merchant's wallet before the customer has put their phone away.</p>
-
-  <h2>Two sides of the same thing</h2>
-  <div class="pair">
-    <div class="side">
-      <p class="k">Merchants</p>
-      <h3>Take payments</h3>
-      <p>Open an account in one transaction — no application, no underwriting, no approval. Share a link, get paid, and refund anything you need to.</p>
-      <a class="go" href="./terminal.html">Accept payments</a>
-    </div>
-    <div class="side g">
-      <p class="k">Holders</p>
-      <h3>Take the fees</h3>
-      <p>Merchants are minted SWIPE by processing. Stake it and receive a share of every fee the network collects in USDC, plus esSWIPE emissions — nothing is minted to pay you, the yield is money that actually came in.</p>
-      <a class="go g" href="./interchange.html">Stake</a>
+<!-- ============ THREE THINGS ============ -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="grid3">
+      <div class="card">
+        <p class="n">01</p>
+        <h3>Settles instantly</h3>
+        <p>Not tonight, not in two days. The customer signs once and the money is in your wallet in that same transaction — because nothing here holds a balance between them.</p>
+      </div>
+      <div class="card">
+        <p class="n">02</p>
+        <h3>You earn as you process</h3>
+        <p>One SWIPE minted per dollar of volume, straight to the merchant. Stake it and you take a cut of everyone else's fees — including your own.</p>
+      </div>
+      <div class="card">
+        <p class="n">03</p>
+        <h3>Nobody owns it</h3>
+        <p>No premine, no treasury, no admin key, no fee switch. One privileged action existed at deployment, it was used once, and it can never be used again.</p>
+      </div>
     </div>
   </div>
+</section>
 
-  <h2>Why it settles instantly</h2>
-  <p class="body">Card money moves through an acquirer, a network, and an issuer before it reaches you, and each of them wants a day. That's where the two-to-three-day wait comes from — not from anything technical, but from a chain of intermediaries each holding your money briefly on the way past.</p>
-  <p class="body">Here there's no chain. The customer signs once and the split happens inside that transaction: your share to your wallet, the fee to the pool. <b>Nothing is held between transactions</b>, because there's no code path that would hold it — the contract has no balance to sweep and no owner to sweep it.</p>
+<!-- ============ TWO PATHS ============ -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <p class="eyebrow">Two sides</p>
+    <h2>Bring volume, <em>or back the ones who do.</em></h2>
 
-  <h2>Refunds yes, chargebacks no</h2>
-  <p class="body">A merchant can send any payment back, in whole or in part, whenever they like — and the money goes to whoever actually paid it rather than an address they type in. What doesn't exist is a customer <i>forcing</i> one.</p>
-  <p class="body">That's a genuine advantage for anyone who's eaten a fraudulent dispute sixty days after doing the work, and a genuine disadvantage for a customer with no recourse if you don't deliver.</p>
-  <p class="body">Which side that suits depends entirely on your business. It suits contractors invoicing commercial customers. It suits a stranger buying something online far less. <a href="./processor-guide.html">The guide covers what this does and doesn't do</a> in more detail than a front page should.</p>
+    <div class="paths">
+      <div class="path">
+        <p class="k">Merchants</p>
+        <h3>Get paid</h3>
+        <p>Open an account in one transaction — no application, no underwriting, no approval. Share a link, keep the takings, refund whatever you need to.</p>
+        <a href="./terminal.html">Accept payments →</a>
+      </div>
+      <div class="path g">
+        <p class="k">Holders</p>
+        <h3>Take the fees</h3>
+        <p>Stake SWIPE and every payment after that pays you twice — real USDC you can spend, and escrowed emissions that convert over a year.</p>
+        <a href="./interchange.html">Stake →</a>
+      </div>
+    </div>
+  </div>
+</section>
 
-  <footer>
-    Terminal <a href="https://testnet.arcscan.app/address/0xDBc6e2ACC9B739417412AD675ef0740E3fA224f9" target="_blank" rel="noopener">0xDBc6…24f9</a> ·
-    Interchange <a href="https://testnet.arcscan.app/address/0x9B57a2cd9D721c0153851FB410D8f7948CB27F95" target="_blank" rel="noopener">0x9B57…7F95</a><br>
-    Arc Testnet, chain 5042002 — both verified onchain, read the source before you trust the page.
-  </footer>
+<!-- ============ CLOSE ============ -->
+<div class="wrap">
+  <div class="close">
+    <h2>It costs a fraction of a cent to try.</h2>
+    <p>Everything runs on Arc testnet with play money. Open an account, pay yourself, and watch the whole loop close in about a minute.</p>
+    <div class="acts">
+      <a class="btn" href="./terminal.html">Start accepting →</a>
+      <a class="btn ghost" href="./processor-guide.html">Read the docs</a>
+    </div>
+  </div>
 </div>
+
+<footer>
+  <div class="wrap">
+    <div class="fgrid">
+      <span>
+        <a href="./processor.html">Overview</a> ·
+        <a href="./terminal.html">Accept</a> ·
+        <a href="./interchange.html">Stake</a> ·
+        <a href="./pool.html">Pool</a> ·
+        <a href="./processor-guide.html">Docs</a>
+      </span>
+      <span>
+        <a href="https://testnet.arcscan.app/address/0xDBc6e2ACC9B739417412AD675ef0740E3fA224f9" target="_blank" rel="noopener">Terminal</a> ·
+        <a href="https://testnet.arcscan.app/address/0x9B57a2cd9D721c0153851FB410D8f7948CB27F95" target="_blank" rel="noopener">Interchange</a> ·
+        <a href="https://testnet.arcscan.app/address/0x074327EAB4D545240A83F2Af27c53Da060898cE6" target="_blank" rel="noopener">Pool</a><br>
+        Arc Testnet · unaudited · play money only
+      </span>
+    </div>
+  </div>
+</footer>
 
 <script>
 const RPCS=["https://rpc.blockdaemon.testnet.arc.network","https://arc-testnet.drpc.org","https://rpc.quicknode.testnet.arc.network","https://5042002.rpc.thirdweb.com"];
@@ -196,29 +283,28 @@ const TM="0xDBc6e2ACC9B739417412AD675ef0740E3fA224f9";
 const IC="0x9B57a2cd9D721c0153851FB410D8f7948CB27F95";
 const pool=RPCS.map(u=>new ethers.JsonRpcProvider(u));
 const $=id=>document.getElementById(id);
-const u6=v=>Number(ethers.formatUnits(v,6)).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const m6=v=>"$"+Number(ethers.formatUnits(v,6)).toLocaleString("en-US",{maximumFractionDigits:2});
+const n18=v=>Number(ethers.formatUnits(v,18)).toLocaleString("en-US",{maximumFractionDigits:0});
+
 (async function(){
-  // Volume and merchant count live on the rail; minted supply lives on the
-  // pool, because the pool is what mints it.
   const tAbi=["function book() view returns (tuple(uint256 volume,uint256 feesRouted,uint256 refunded,uint256 payments,uint256 merchants,address sink))"];
-  const iAbi=["function book() view returns (tuple(uint256 supply,uint256 escrowSupply,uint256 totalStaked,uint256 totalVesting,uint256 feesReceived,uint256 feesPaid,uint256 volumeProcessed,uint256 mintedToMerchants,uint256 emittedToStakers,uint256 stakedPct,address terminal,uint256 clawedBack,uint256 unrecovered))"];
+  const iAbi=["function totalSupply() view returns (uint256)"];
   for(const p of pool){
     try{
       const b=await new ethers.Contract(TM,tAbi,p).book();
-      $("sVol").textContent=u6(b.volume);
-      $("sFees").textContent=u6(b.feesRouted);
-      $("sMerch").textContent=b.merchants.toString();
+      $("tVol").textContent=m6(b.volume);
+      $("tFees").textContent=m6(b.feesRouted);
+      $("tMerch").textContent=b.merchants.toString();
       try{
-        const i=await new ethers.Contract(IC,iAbi,p).book();
-        const minted=Number(ethers.formatUnits(i.mintedToMerchants,18));
-        $("earnLine").textContent = minted>0
-          ? minted.toLocaleString("en-US",{maximumFractionDigits:2})+" SWIPE minted so far — every unit of it by a merchant processing a payment."
-          : "Supply is zero. It stays zero until somebody processes a payment, because there is no other way to create any.";
-      }catch(_){}
+        const s=await new ethers.Contract(IC,iAbi,p).totalSupply();
+        $("tSupply").textContent=n18(s);
+      }catch(_){ $("tSupply").textContent="0"; }
       return;
     }catch(e){}
   }
-  ["sVol","sFees","sMerch"].forEach(k=>$(k).textContent="—");
+  // A live number that can't load should read as zero, not as a broken page.
+  ["tVol","tFees"].forEach(k=>$(k).textContent="$0");
+  ["tSupply","tMerch"].forEach(k=>$(k).textContent="0");
 })();
 </script>
 </body>
