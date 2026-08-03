@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How it works</title>
+<meta name="description" content="How a stablecoin processor routes its fee to stakers, and how escrowed rewards vest without anyone being penalised.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fbfbfc; --card:#ffffff; --ink:#0b0f14; --dim:#5a6570; --faint:#8b95a1;
+    --line:#e6e9ed; --line-2:#d3d9e0;
+    --brand:#0f7a6b; --brand-soft:#e6f4f1; --gold:#b5822a; --gold-soft:#fdf3e1; --warn:#b4432f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-size:16px;line-height:1.7;
+    padding:26px 16px 80px;display:flex;justify-content:center;-webkit-font-smoothing:antialiased}
+  .shell{width:100%;max-width:660px}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:36px;flex-wrap:wrap}
+  .mark{font-weight:800;font-size:19px;letter-spacing:-.03em}
+  .mark i{font-style:normal;color:var(--brand)}
+  .nav{display:flex;gap:6px;flex-wrap:wrap}
+  .nav a{font-size:13px;font-weight:500;color:var(--dim);text-decoration:none;padding:6px 11px;border-radius:7px}
+  .nav a:hover,.nav a.on{background:var(--brand-soft);color:var(--brand)}
+
+  h1{font-size:clamp(29px,6.4vw,40px);line-height:1.08;letter-spacing:-.04em;font-weight:800;margin:0 0 16px}
+  h1 i{font-style:normal;color:var(--brand)}
+  .lede{font-size:17.5px;color:var(--dim);margin:0 0 12px;max-width:56ch}
+  .lede b{color:var(--ink);font-weight:600}
+
+  h2{font-size:23px;font-weight:800;letter-spacing:-.03em;margin:44px 0 12px}
+  h3{font-size:17px;font-weight:700;letter-spacing:-.01em;margin:0 0 7px}
+  p{color:var(--dim);margin:0 0 14px;max-width:62ch}
+  b{color:var(--ink);font-weight:600}
+  code{font-family:"DM Mono",monospace;font-size:13.5px;background:#f1f3f6;padding:1px 5px;border-radius:4px}
+
+  .fig{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin:20px 0 12px}
+  .fig-lab{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 15px}
+  .fig p{font-size:13.5px;margin:15px 0 0}
+
+  /* the reserve diagram */
+  .sb{display:flex;height:34px;border-radius:8px;overflow:hidden;background:#f0f2f5}
+  .sb .free{background:var(--brand);display:flex;align-items:center;padding-left:12px;
+    font-family:"DM Mono",monospace;font-size:12px;color:#fff;white-space:nowrap}
+  .sb .res{background:var(--gold);display:flex;align-items:center;padding-left:12px;
+    background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.22) 0 5px,transparent 5px 10px);
+    font-family:"DM Mono",monospace;font-size:12px;color:#3d2b00;white-space:nowrap}
+
+  /* vest timeline */
+  .vt{display:flex;align-items:flex-end;gap:4px;height:70px;margin-top:6px}
+  .vt div{flex:1;background:var(--gold-soft);border-radius:2px 2px 0 0;position:relative}
+  .vt div i{position:absolute;left:0;right:0;bottom:0;background:var(--gold);border-radius:2px 2px 0 0}
+  .vt-lab{display:flex;justify-content:space-between;font-family:"DM Mono",monospace;
+    font-size:9.5px;color:var(--faint);margin-top:7px}
+
+  table{width:100%;border-collapse:collapse;margin:12px 0 20px;font-size:14.5px}
+  th,td{text-align:left;padding:12px 0;border-bottom:1px solid var(--line);color:var(--dim);vertical-align:top}
+  th{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--faint);font-weight:400}
+  td:first-child{color:var(--ink);font-weight:600;width:36%;padding-right:16px}
+
+  .plain{border-left:2px solid var(--warn);padding:2px 0 2px 16px;margin:20px 0}
+  .plain p{font-size:15px;color:var(--dim)}
+  .plain p:last-child{margin:0}
+
+  .cta{display:inline-block;background:var(--brand);color:#fff;font-weight:600;font-size:15px;
+    text-decoration:none;padding:12px 22px;border-radius:9px;margin-top:8px}
+  .cta:hover{filter:brightness(1.08)}
+
+  footer{margin-top:46px;padding-top:20px;border-top:1px solid var(--line);
+    font-family:"DM Mono",monospace;font-size:11px;line-height:1.85;color:var(--faint);text-align:center}
+  footer a{color:var(--dim)}
+  a{color:var(--brand)}
+  @media (max-width:520px){ table,tbody,tr,td,th{display:block} th{display:none}
+    tr{border-bottom:1px solid var(--line);padding:10px 0} td{border:0;padding:2px 0;width:auto}
+    td:first-child{color:var(--ink)} }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="mark">Term<i>inal</i></div>
+    <nav class="nav">
+      <a href="./processor.html">Overview</a>
+      <a href="./terminal.html">Accept</a>
+      <a href="./interchange.html">Stake</a>
+      <a href="./processor-guide.html" class="on">How it works</a>
+    </nav>
+  </div>
+
+  <h1>Two contracts, and the second one <i>can't be pointed anywhere else.</i></h1>
+  <p class="lede">Terminal takes payments and skims 2.5%. Interchange holds stakes and hands out whatever Terminal sends it. The address Terminal sends to was fixed when it was deployed and has no setter — which is the difference between "the fee goes to stakers" and "the fee goes wherever the operator later decides."</p>
+
+  <h2>What happens in one payment</h2>
+  <p>A single transaction, three movements, no balance left behind.</p>
+  <table>
+    <tr><th>Step</th><th>What moves</th></tr>
+    <tr><td>Customer signs</td><td>100.00 USDC leaves their wallet. The quoted price is the charged price — the fee is taken from it, never added on top, because a displayed price that isn't what you pay is a lie.</td></tr>
+    <tr><td>Merchant paid</td><td>97.50 goes straight to their payout address. It never touches Terminal's balance, so there is nothing to hold, delay, or lose.</td></tr>
+    <tr><td>Fee routed</td><td>2.50 passes through Terminal into Interchange in the same call. If Interchange ever refused it, the whole payment would revert — better a failed payment than a fee stranded somewhere with no way out.</td></tr>
+  </table>
+
+  <h2>How a stake earns</h2>
+  <p>There is one number doing all the work: <code>accFeePerShare</code>. When a fee arrives it rises by the fee divided by the total staked. Your claim is the difference between that number now and what it was when you last touched your stake.</p>
+  <p>Which means the thing people always worry about can't happen: <b>staking after a fee arrives earns you nothing from it.</b> Your starting point is set at the moment you stake, so you only ever collect from fees that came in after you did.</p>
+  <p>Fees that arrive when nobody is staked would have no denominator to divide by, so they're banked and released into the pool the moment someone stakes. Nothing is stranded.</p>
+
+  <h2>The escrow, which is the interesting part</h2>
+  <p>Rewards can be paid as <b>esSWIPE</b> — escrowed units with no transfer function at all. Not a modifier that could be bypassed; there is simply no code path that moves them. The only exit is converting to real SWIPE, linearly over a year.</p>
+  <p>And to convert, you must reserve an equal amount of staked SWIPE. Reserved stake can't be withdrawn until the conversion finishes.</p>
+
+  <div class="fig">
+    <p class="fig-lab">1,000 staked · 400 esSWIPE converting</p>
+    <div class="sb">
+      <div class="free" style="width:60%">600 free to unstake</div>
+      <div class="res" style="width:40%">400 reserved</div>
+    </div>
+    <p>The reserved portion still earns fees the whole time. It just can't leave.</p>
+  </div>
+
+  <p><b>Nobody is slashed for leaving.</b> Leaving is simply not available while you're mid-conversion — and cancelling returns the unconverted part to escrow and frees the stake immediately. A lock is easier to defend and harder to resent than a forfeiture, and it produces exactly the same behaviour.</p>
+
+  <div class="fig">
+    <p class="fig-lab">Each deposit converts over its own year — rates add, they don't queue</p>
+    <div class="vt">
+      <div><i style="height:8%"></i></div><div><i style="height:16%"></i></div>
+      <div><i style="height:25%"></i></div><div><i style="height:33%"></i></div>
+      <div><i style="height:41%"></i></div><div><i style="height:50%"></i></div>
+      <div><i style="height:66%"></i></div><div><i style="height:75%"></i></div>
+      <div><i style="height:83%"></i></div><div><i style="height:91%"></i></div>
+      <div><i style="height:96%"></i></div><div><i style="height:100%"></i></div>
+    </div>
+    <div class="vt-lab"><span>start</span><span>6 months</span><span>1 year</span></div>
+    <p>Topping up mid-way never delays what you were already converting. Add more at month six and the original finishes on its original schedule while the new amount runs its own.</p>
+  </div>
+
+  <h2>What the operator can and can't do</h2>
+  <table>
+    <tr><th>Can</th><th>Cannot</th></tr>
+    <tr><td>Issue SWIPE and esSWIPE to anyone</td><td>Change the fee rate — it's immutable</td></tr>
+    <tr><td>Close issuance permanently</td><td>Redirect where fees go</td></tr>
+    <tr><td>Open a merchant account like anyone else</td><td>Seize a stake, cancel someone's conversion, or touch the fee pool</td></tr>
+    <tr><td>Deploy a second Terminal at a different rate</td><td>Pause anything, or reverse a payment</td></tr>
+  </table>
+
+  <h2>The bug the simulation caught</h2>
+  <p>The standard fee-accumulator pattern has a rounding flaw that ships in production contracts constantly. Per-share accounting floors when a fee is deposited, but each staker's own multiplication can round the other way — so the <b>last person to claim</b> from a pool is owed a unit or two more than the contract actually holds. Their transaction reverts, and the final claimant can never withdraw.</p>
+  <p>Across 20,000 randomized pools, 2,213 hit it. The fix is to pay the lesser of what's owed and what's held, so the shortfall — at most a few millionths of a dollar — is dropped rather than turning into a permanently stuck balance. After the fix: zero.</p>
+
+  <h2>What this isn't</h2>
+  <div class="plain">
+    <p><b>Not a card network.</b> No chargebacks, disputes, refunds it can enforce, fraud screening, or compliance of any kind. Those are most of what a real processor sells.</p>
+    <p><b>Not solving the hard problem.</b> The customer still needs USDC. That's the actual barrier and no contract design fixes it.</p>
+    <p><b>Not a fair launch.</b> SWIPE is issued by the operator to whoever they choose. Merchants earning it by volume would be better and truer; that isn't what's deployed.</p>
+    <p><b>Not audited.</b> Verified against simulations, which is not the same thing, and running on a testnet with play money.</p>
+  </div>
+
+  <h2>Try it</h2>
+  <p>Open a merchant account, pay yourself from a second wallet, then stake and watch the fee arrive as claimable USDC. The whole loop takes a few minutes and costs a fraction of a cent.</p>
+  <a class="cta" href="./terminal.html">Accept a payment →</a>
+
+  <footer>
+    Terminal <a href="https://testnet.arcscan.app/address/0xC168439DbFA9Ea78C32A0e3dB99eBA9284B860A3" target="_blank" rel="noopener">0xC168…60A3</a> ·
+    Interchange <a href="https://testnet.arcscan.app/address/0xa551b604bf2BEd9D52cA80e5602836B67403b98E" target="_blank" rel="noopener">0xa551…b98E</a><br>
+    Arc Testnet, chain 5042002
+  </footer>
+</div>
+</body>
+</html>

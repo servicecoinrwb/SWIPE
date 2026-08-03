@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interchange · stake</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#fbfbfc; --card:#ffffff; --ink:#0b0f14; --dim:#5a6570; --faint:#8b95a1;
+    --line:#e6e9ed; --line-2:#d3d9e0;
+    --brand:#0f7a6b; --brand-soft:#e6f4f1;
+    --lock:#b5822a; --lock-soft:#fdf3e1;
+    --warn:#b4432f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-size:15.5px;line-height:1.6;
+    padding:26px 16px 80px;display:flex;justify-content:center;-webkit-font-smoothing:antialiased}
+  .shell{width:100%;max-width:680px}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:28px;flex-wrap:wrap}
+  .mark{font-weight:800;font-size:19px;letter-spacing:-.03em}
+  .mark i{font-style:normal;color:var(--brand)}
+  .nav{display:flex;gap:6px;flex-wrap:wrap}
+  .nav a{font-size:13px;font-weight:500;color:var(--dim);text-decoration:none;padding:6px 11px;border-radius:7px}
+  .nav a:hover,.nav a.on{background:var(--brand-soft);color:var(--brand)}
+
+  h1{font-size:clamp(26px,5.6vw,34px);line-height:1.14;letter-spacing:-.03em;font-weight:800;margin:0 0 8px}
+  .lede{font-size:16px;color:var(--dim);margin:0 0 26px;max-width:54ch}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:14px}
+  .card h2{font-size:17px;font-weight:700;letter-spacing:-.01em;margin:0 0 4px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .how{font-size:13.5px;color:var(--dim);margin:0 0 16px}
+  .tag{font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;
+    padding:3px 8px;border-radius:99px;background:var(--lock-soft);color:var(--lock)}
+
+  /* SIGNATURE: the claim */
+  .claim{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:14px}
+  .claim-in{padding:24px}
+  .claim-lab{font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 12px}
+  .amount{font-family:"DM Mono",monospace;font-weight:500;font-size:clamp(32px,9vw,50px);
+    line-height:1;letter-spacing:-.03em;margin:0;color:var(--brand)}
+  .amount small{font-size:13px;color:var(--faint);letter-spacing:.06em;margin-left:9px}
+  .amount.zero{color:var(--faint)}
+  .sub{font-size:13.5px;color:var(--dim);margin:9px 0 0}
+
+  /* stake bar: free vs reserved */
+  .stakebar{margin:20px 0 0}
+  .sb-head{display:flex;justify-content:space-between;font-family:"DM Mono",monospace;
+    font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
+  .sb{display:flex;height:26px;border-radius:7px;overflow:hidden;background:#f0f2f5}
+  .sb .free{background:var(--brand)}
+  .sb .res{background:var(--lock);
+    background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.22) 0 5px,transparent 5px 10px)}
+  .sb-key{display:flex;gap:16px;flex-wrap:wrap;margin-top:9px;font-size:12.5px;color:var(--dim)}
+  .kd{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:0}
+  .k1{background:var(--brand)} .k2{background:var(--lock)}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);
+    border-top:1px solid var(--line)}
+  .stats > div{background:var(--card);padding:13px 10px;text-align:center}
+  .stats dt{font-family:"DM Mono",monospace;font-size:9px;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 4px}
+  .stats dd{margin:0;font-family:"DM Mono",monospace;font-size:14px;font-weight:500}
+
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--dim);margin:0 0 6px}
+  input{width:100%;font-family:"DM Mono",monospace;font-size:15px;padding:11px 13px;
+    border:1px solid var(--line-2);border-radius:9px;background:#fff;color:var(--ink);margin-bottom:12px}
+  input:focus-visible{outline:2px solid var(--brand);outline-offset:-1px;border-color:transparent}
+  input::placeholder{color:#b6bec7}
+  button{font-family:"Plus Jakarta Sans",sans-serif;font-size:14.5px;font-weight:600;border:0;border-radius:9px;
+    padding:12px 18px;cursor:pointer;width:100%;background:var(--brand);color:#fff;transition:filter .14s}
+  button:hover:not(:disabled){filter:brightness(1.08)}
+  button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  button:disabled{background:#eceff2;color:#a8b1ba;cursor:not-allowed}
+  button.ghost{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line-2)}
+  button.ghost:hover:not(:disabled){background:#f6f7f9;filter:none}
+  button.lock{background:var(--lock)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .why{font-family:"DM Mono",monospace;font-size:11.5px;line-height:1.65;color:var(--dim);margin:10px 0 0}
+  .why.warn{color:var(--warn)} .why.ok{color:var(--brand)}
+
+  .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 0;
+    border-top:1px solid var(--line);font-size:14px}
+  .row:first-child{border-top:0}
+  .row dt{color:var(--dim);margin:0}
+  .row dd{margin:0;font-family:"DM Mono",monospace;font-weight:500}
+
+  .note{font-family:"DM Mono",monospace;font-size:11px;line-height:1.75;color:var(--faint);
+    margin-top:22px;text-align:center}
+  .note a{color:var(--dim)}
+  .disc{border-left:2px solid var(--line-2);padding:2px 0 2px 14px;margin:16px 0 0;
+    font-size:12.5px;color:var(--faint);line-height:1.7}
+  a{color:var(--brand)}
+  .hidden{display:none !important}
+  @media (max-width:600px){ .two{grid-template-columns:1fr} .stats{grid-template-columns:1fr 1fr} }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="mark">Inter<i>change</i></div>
+    <nav class="nav">
+      <a href="./processor.html">Overview</a>
+      <a href="./terminal.html">Accept</a>
+      <a href="./interchange.html" class="on">Stake</a>
+      <a href="./processor-guide.html">How it works</a>
+    </nav>
+  </div>
+
+  <h1>The fees don't go to a company.</h1>
+  <p class="lede">Stake SWIPE and you receive a share of every payment fee the network collects, in USDC. Nothing is minted to pay you — the yield is money that actually came in, or it's nothing.</p>
+
+  <!-- SIGNATURE: the claim -->
+  <section class="claim">
+    <div class="claim-in">
+      <p class="claim-lab">Your share, claimable now</p>
+      <p class="amount zero" id="claimOut">—<small>USDC</small></p>
+      <p class="sub" id="claimSub">Connect a wallet to see your position.</p>
+
+      <div class="stakebar hidden" id="sbWrap">
+        <div class="sb-head"><span>Your stake</span><span id="sbTotal"></span></div>
+        <div class="sb">
+          <div class="free" id="sbFree" style="width:0%"></div>
+          <div class="res" id="sbRes" style="width:0%"></div>
+        </div>
+        <div class="sb-key">
+          <span><i class="kd k1"></i>Free to unstake <b id="kFree">—</b></span>
+          <span><i class="kd k2"></i>Reserved against vesting <b id="kRes">—</b></span>
+        </div>
+      </div>
+
+      <button id="claimBtn" class="hidden" style="margin-top:18px">Claim</button>
+      <p class="why" id="claimWhy"></p>
+    </div>
+    <dl class="stats">
+      <div><dt>Fees collected</dt><dd id="sFees">—</dd></div>
+      <div><dt>Total staked</dt><dd id="sStaked">—</dd></div>
+      <div><dt>Of supply</dt><dd id="sPct">—</dd></div>
+      <div><dt>Your slice</dt><dd id="sMine">—</dd></div>
+    </dl>
+  </section>
+
+  <section class="card">
+    <h2>Your holdings</h2>
+    <p class="how" id="holdHow">Connect to see them.</p>
+    <button id="connectBtn">Connect wallet</button>
+    <dl id="holdBody" class="hidden" style="margin:0">
+      <div class="row"><dt>SWIPE, spendable</dt><dd id="hBal">—</dd></div>
+      <div class="row"><dt>SWIPE, staked</dt><dd id="hStaked">—</dd></div>
+      <div class="row"><dt>esSWIPE, not yet vesting</dt><dd id="hEsc">—</dd></div>
+      <div class="row"><dt>esSWIPE, converting</dt><dd id="hVest">—</dd></div>
+      <div class="row"><dt>Arriving daily</dt><dd id="hRate">—</dd></div>
+    </dl>
+  </section>
+
+  <section class="card hidden" id="stakePanel">
+    <h2>Stake</h2>
+    <p class="how">Staked SWIPE earns a share of every fee deposited after you stake. Fees that arrived earlier aren't yours — that's the whole reason this is fair.</p>
+    <label for="stAmt">Amount</label>
+    <input id="stAmt" placeholder="1000" inputmode="decimal" autocomplete="off">
+    <div class="two">
+      <button id="stakeBtn">Stake</button>
+      <button id="unstakeBtn" class="ghost">Unstake</button>
+    </div>
+    <p class="why" id="stakeWhy"></p>
+  </section>
+
+  <section class="card hidden" id="vestPanel">
+    <h2>Convert escrow <span class="tag">Locks stake</span></h2>
+    <p class="how">esSWIPE can't be sold or sent. It becomes real SWIPE by vesting over a year — and while it does, an equal amount of your staked SWIPE can't be withdrawn. It's a lock, not a penalty: cancel any time and the unvested part goes back to escrow.</p>
+    <label for="vAmt">esSWIPE to convert</label>
+    <input id="vAmt" placeholder="500" inputmode="decimal" autocomplete="off">
+    <p class="why" id="vestQuote">Enter an amount.</p>
+    <div class="two">
+      <button id="vestBtn" class="lock">Start converting</button>
+      <button id="cancelBtn" class="ghost">Cancel conversion</button>
+    </div>
+    <p class="why" id="vestWhy"></p>
+  </section>
+
+  <section class="card hidden" id="issuePanel">
+    <h2>Issue <span class="tag">Operator</span></h2>
+    <p class="how">Visible because you deployed this. Issuance is manual today — nothing earns SWIPE automatically, which the guide says plainly rather than implying otherwise.</p>
+    <div class="two">
+      <div><label for="iTo">To</label><input id="iTo" placeholder="0x…" autocomplete="off"></div>
+      <div><label for="iAmt">Amount</label><input id="iAmt" placeholder="10000" inputmode="decimal" autocomplete="off"></div>
+    </div>
+    <div class="two">
+      <button id="issueBtn">Issue SWIPE</button>
+      <button id="issueEsBtn" class="lock">Issue esSWIPE</button>
+    </div>
+    <p class="why" id="issueWhy"></p>
+  </section>
+
+  <p class="note">
+    Interchange <a href="https://testnet.arcscan.app/address/0xa551b604bf2BEd9D52cA80e5602836B67403b98E" target="_blank" rel="noopener">0xa551…b98E</a> ·
+    fed by <a href="./terminal.html">Terminal</a><br>
+    Arc Testnet · unaudited · play money only
+  </p>
+  <div class="disc">
+    Staking yield here is a share of fees that were actually paid in. If no payments happen, there is no yield — this contract cannot mint rewards and will not pretend to.
+  </div>
+</div>
+
+<script>
+const NET={ label:"Arc Testnet", chainId:5042002,
+  rpcs:["https://rpc.blockdaemon.testnet.arc.network","https://arc-testnet.drpc.org","https://rpc.quicknode.testnet.arc.network","https://5042002.rpc.thirdweb.com","https://rpc.testnet.arc.network","https://rpc.testnet.arc.io"],
+  explorer:"https://testnet.arcscan.app",
+  interchange:"0xa551b604bf2BEd9D52cA80e5602836B67403b98E" };
+const IC=NET.interchange, RPCS=NET.rpcs, CHAIN=NET.chainId;
+
+const ABI=[
+  "function positionOf(address) view returns (tuple(uint256 balance,uint256 staked,uint256 reserved,uint256 freeToUnstake,uint256 escrow,uint256 vesting,uint256 vestPerDay,uint256 pendingFees,uint256 shareOfPoolPpm))",
+  "function book() view returns (tuple(uint256 supply,uint256 escrowSupply,uint256 totalStaked,uint256 totalVesting,uint256 feesReceived,uint256 feesPaid,uint256 banked,uint256 stakedPct,bool closed))",
+  "function issuer() view returns (address)",
+  "function stake(uint256)","function unstake(uint256)","function claimFees() returns (uint256)",
+  "function vest(uint256)","function cancelVest() returns (uint256)","function settleVesting(address)",
+  "function issue(address,uint256,bool)",
+  "error ZeroAmount()","error ZeroAddress()","error NotIssuer()","error IssuanceClosed()",
+  "error InsufficientBalance(uint256 have,uint256 want)","error InsufficientStake(uint256 have,uint256 want)",
+  "error StakeReserved(uint256 free,uint256 want)","error InsufficientEscrow(uint256 have,uint256 want)",
+  "error NothingToClaim()","error AboveCap(uint256 attempted,uint256 cap)"
+];
+const IFACE=new ethers.Interface(ABI);
+const ARC={chainId:"0x"+CHAIN.toString(16),chainName:NET.label,
+  nativeCurrency:{name:"USDC",symbol:"USDC",decimals:18},rpcUrls:RPCS,blockExplorerUrls:[NET.explorer]};
+
+const $=id=>document.getElementById(id);
+const t18=v=>Number(ethers.formatUnits(v,18)).toLocaleString("en-US",{maximumFractionDigits:2});
+const u6=v=>Number(ethers.formatUnits(v,6)).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const p18=s=>ethers.parseUnits(s,18);
+
+const pool=RPCS.map(u=>new ethers.JsonRpcProvider(u));
+let wp=null;
+const readers=()=>wp?[wp,...pool]:pool;
+async function rd(fn){ let e; for(const p of readers()){ try{ return await fn(new ethers.Contract(IC,ABI,p)); }catch(x){e=x;} } throw e; }
+
+let signer=null,me=null,pos=null,bk=null,issuer=null;
+
+/* ---------------- read ---------------- */
+async function loadBook(){
+  try{
+    bk=await rd(c=>c.book());
+    $("sFees").textContent=u6(bk.feesReceived);
+    $("sStaked").textContent=t18(bk.totalStaked);
+    $("sPct").textContent=(Number(bk.stakedPct)/100).toFixed(1)+"%";
+  }catch(e){ console.error(e); }
+}
+
+async function loadPos(){
+  if(!me) return;
+  try{
+    const p=await rd(c=>c.positionOf(me));
+    pos={balance:p[0],staked:p[1],reserved:p[2],free:p[3],escrow:p[4],
+         vesting:p[5],vestPerDay:p[6],pending:p[7],ppm:Number(p[8])};
+    render();
+  }catch(e){ console.error(e); }
+}
+
+function render(){
+  // the claim
+  const has = pos.pending>0n;
+  $("claimOut").className="amount"+(has?"":" zero");
+  $("claimOut").innerHTML=u6(pos.pending)+'<small>USDC</small>';
+  $("claimBtn").classList.toggle("hidden",!has);
+  if(has) $("claimBtn").textContent="Claim "+u6(pos.pending)+" USDC";
+
+  $("sMine").textContent=(pos.ppm/10000).toFixed(2)+"%";
+
+  $("claimSub").textContent = pos.staked===0n
+    ? "Nothing staked, so nothing accrues. Stake below and every fee after that point is partly yours."
+    : has ? "Accrued since you last claimed. It's yours whenever you want it — nothing expires."
+    : "Staked and earning. Nothing has come in since your last claim.";
+
+  // stake bar
+  $("sbWrap").classList.toggle("hidden", pos.staked===0n);
+  if(pos.staked>0n){
+    const total=Number(ethers.formatUnits(pos.staked,18));
+    const res=Number(ethers.formatUnits(pos.reserved,18));
+    const freePct=total>0?((total-res)/total*100):0;
+    $("sbFree").style.width=freePct+"%";
+    $("sbRes").style.width=(100-freePct)+"%";
+    $("sbTotal").textContent=t18(pos.staked)+" SWIPE";
+    $("kFree").textContent=t18(pos.free);
+    $("kRes").textContent=t18(pos.reserved);
+  }
+
+  // holdings
+  $("holdBody").classList.remove("hidden");
+  $("holdHow").textContent="SWIPE is spendable and stakeable. esSWIPE is neither — it only becomes SWIPE by converting.";
+  $("hBal").textContent=t18(pos.balance)+" SWIPE";
+  $("hStaked").textContent=t18(pos.staked)+" SWIPE";
+  $("hEsc").textContent=t18(pos.escrow)+" esSWIPE";
+  $("hVest").textContent=t18(pos.vesting)+" esSWIPE";
+  $("hRate").textContent=pos.vestPerDay>0n ? t18(pos.vestPerDay)+" SWIPE/day" : "—";
+
+  $("stakePanel").classList.remove("hidden");
+  $("vestPanel").classList.toggle("hidden", pos.escrow===0n && pos.vesting===0n);
+  quoteVest();
+}
+
+/* ---------------- connect ---------------- */
+(async function boot(){
+  await loadBook();
+  if(!window.ethereum) return;
+  try{ const a=await window.ethereum.request({method:"eth_accounts"}); if(a&&a.length) await connect(true); }catch(_){}
+})();
+$("connectBtn").onclick=()=>connect(false);
+
+async function connect(silent){
+  if(!window.ethereum){
+    if(!silent){ $("claimWhy").textContent="No wallet in this browser."; $("claimWhy").className="why warn"; }
+    return;
+  }
+  try{
+    if(!silent) await window.ethereum.request({method:"eth_requestAccounts"});
+    const n=await window.ethereum.request({method:"eth_chainId"});
+    if(parseInt(n,16)!==CHAIN){
+      try{ await window.ethereum.request({method:"wallet_switchEthereumChain",params:[{chainId:ARC.chainId}]}); }
+      catch(e){ if(e.code===4902) await window.ethereum.request({method:"wallet_addEthereumChain",params:[ARC]}); else throw e; }
+    }
+    const bp=new ethers.BrowserProvider(window.ethereum);
+    wp=bp; signer=await bp.getSigner(); me=await signer.getAddress();
+    $("connectBtn").classList.add("hidden");
+    try{ issuer=await rd(c=>c.issuer());
+      if(issuer.toLowerCase()===me.toLowerCase()) $("issuePanel").classList.remove("hidden"); }catch(_){}
+    await loadPos();
+  }catch(e){
+    if(!silent){ $("claimWhy").textContent="Wallet didn't connect: "+(e.shortMessage||e.message); $("claimWhy").className="why warn"; }
+  }
+}
+
+/* ---------------- write ---------------- */
+const ERRS={
+  ZeroAmount:"Amount can't be zero.",
+  NotIssuer:"Only the issuer can do that.",
+  IssuanceClosed:"Issuance was closed permanently.",
+  NothingToClaim:"Nothing to claim right now.",
+  InsufficientBalance:"You don't hold that much SWIPE.",
+  InsufficientStake:"You don't have that much staked.",
+  StakeReserved:"That much is reserved against a conversion in progress and can't be unstaked until it finishes — or you cancel it.",
+  InsufficientEscrow:"You don't hold that much esSWIPE.",
+  AboveCap:"That would go past the supply cap."
+};
+function why(e){
+  const m=e.shortMessage||e.message||"";
+  if(m.includes("rejected")||e?.code==="ACTION_REJECTED") return "You rejected the signature. Nothing changed.";
+  let r=e?.revert;
+  if(!r){ const d=e?.data||e?.info?.error?.data||e?.error?.data;
+    if(typeof d==="string"){ try{ r=IFACE.parseError(d); }catch(_){} } }
+  if(r&&ERRS[r.name]){
+    if(r.name==="StakeReserved"&&r.args) return "Only "+t18(r.args[0])+" SWIPE is free — the rest is reserved against a conversion in progress.";
+    return ERRS[r.name];
+  }
+  if(r) return "Reverted: "+r.name;
+  return "Failed: "+m;
+}
+
+async function tx(fn,btn,label,after){
+  btn.disabled=true; const old=btn.textContent; btn.textContent="Confirm…";
+  try{
+    const c=new ethers.Contract(IC,ABI,signer);
+    await (await fn(c)).wait();
+    await loadBook(); await loadPos();
+    if(after) after();
+  }catch(e){ return why(e); }
+  finally{ btn.disabled=false; btn.textContent=old; }
+  return null;
+}
+
+$("claimBtn").onclick=async()=>{
+  const err=await tx(c=>c.claimFees(),$("claimBtn"),"",()=>{
+    $("claimWhy").textContent="Claimed. It's in your wallet."; $("claimWhy").className="why ok"; });
+  if(err){ $("claimWhy").textContent=err; $("claimWhy").className="why warn"; }
+};
+
+$("stakeBtn").onclick=async()=>{
+  const v=$("stAmt").value.trim();
+  if(!v||isNaN(v)||Number(v)<=0){ $("stakeWhy").textContent="Enter an amount."; $("stakeWhy").className="why warn"; return; }
+  const err=await tx(c=>c.stake(p18(v)),$("stakeBtn"),"",()=>{
+    $("stAmt").value="";
+    $("stakeWhy").textContent="Staked. Every fee from here on is partly yours."; $("stakeWhy").className="why ok"; });
+  if(err){ $("stakeWhy").textContent=err; $("stakeWhy").className="why warn"; }
+};
+
+$("unstakeBtn").onclick=async()=>{
+  const v=$("stAmt").value.trim();
+  if(!v||isNaN(v)||Number(v)<=0){ $("stakeWhy").textContent="Enter an amount."; $("stakeWhy").className="why warn"; return; }
+  const err=await tx(c=>c.unstake(p18(v)),$("unstakeBtn"),"",()=>{
+    $("stAmt").value="";
+    $("stakeWhy").textContent="Unstaked. It stops earning from now."; $("stakeWhy").className="why ok"; });
+  if(err){ $("stakeWhy").textContent=err; $("stakeWhy").className="why warn"; }
+};
+
+function quoteVest(){
+  if(!pos) return;
+  const v=$("vAmt").value.trim();
+  if(!v||isNaN(v)||Number(v)<=0){
+    $("vestQuote").textContent = pos.vesting>0n
+      ? t18(pos.vesting)+" esSWIPE converting, "+t18(pos.vestPerDay)+" SWIPE arriving each day."
+      : "Enter an amount.";
+    return;
+  }
+  let a; try{ a=p18(v); }catch{ return; }
+  if(a>pos.escrow){ $("vestQuote").textContent="You hold "+t18(pos.escrow)+" esSWIPE."; return; }
+  const needed=pos.vesting+a;
+  if(needed>pos.staked){
+    $("vestQuote").textContent="Converting this needs "+t18(needed)+" SWIPE staked as collateral — you have "+t18(pos.staked)+". Stake more first.";
+    return;
+  }
+  const perDay=Number(ethers.formatUnits(a,18))/365;
+  $("vestQuote").textContent="Reserves "+t18(a)+" of your stake for a year, and returns about "+
+    perDay.toFixed(2)+" SWIPE a day. The reserved stake keeps earning fees the whole time.";
+}
+$("vAmt").addEventListener("input",quoteVest);
+
+$("vestBtn").onclick=async()=>{
+  const v=$("vAmt").value.trim();
+  if(!v||isNaN(v)||Number(v)<=0){ $("vestWhy").textContent="Enter an amount."; $("vestWhy").className="why warn"; return; }
+  const err=await tx(c=>c.vest(p18(v)),$("vestBtn"),"",()=>{
+    $("vAmt").value="";
+    $("vestWhy").textContent="Converting. That much stake is now reserved until it finishes."; $("vestWhy").className="why ok"; });
+  if(err){ $("vestWhy").textContent=err; $("vestWhy").className="why warn"; }
+};
+
+$("cancelBtn").onclick=async()=>{
+  const err=await tx(c=>c.cancelVest(),$("cancelBtn"),"",()=>{
+    $("vestWhy").textContent="Cancelled. What had already converted stays SWIPE; the rest went back to escrow and your stake is free.";
+    $("vestWhy").className="why ok"; });
+  if(err){ $("vestWhy").textContent=err; $("vestWhy").className="why warn"; }
+};
+
+async function doIssue(escrowed){
+  const b=escrowed?$("issueEsBtn"):$("issueBtn");
+  const to=$("iTo").value.trim()||me, v=$("iAmt").value.trim();
+  if(!ethers.isAddress(to)){ $("issueWhy").textContent="That address isn't valid."; $("issueWhy").className="why warn"; return; }
+  if(!v||isNaN(v)||Number(v)<=0){ $("issueWhy").textContent="Enter an amount."; $("issueWhy").className="why warn"; return; }
+  const err=await tx(c=>c.issue(to,p18(v),escrowed),b,"",()=>{
+    $("iAmt").value="";
+    $("issueWhy").textContent="Issued "+(escrowed?"esSWIPE — it can only leave by converting.":"SWIPE.");
+    $("issueWhy").className="why ok"; });
+  if(err){ $("issueWhy").textContent=err; $("issueWhy").className="why warn"; }
+}
+$("issueBtn").onclick=()=>doIssue(false);
+$("issueEsBtn").onclick=()=>doIssue(true);
+</script>
+</body>
+</html>

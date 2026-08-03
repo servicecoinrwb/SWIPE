@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terminal · accept payments</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<style>
+  /* ============================================================
+     Light, quiet, and boring on purpose. Everything else built on
+     this chain is dark and textured; a payment page should look
+     like software a business would put in front of a customer.
+     ============================================================ */
+  :root{
+    --bg:#fbfbfc;
+    --card:#ffffff;
+    --ink:#0b0f14;
+    --dim:#5a6570;
+    --faint:#8b95a1;
+    --line:#e6e9ed;
+    --line-2:#d3d9e0;
+    --brand:#0f7a6b;
+    --brand-soft:#e6f4f1;
+    --warn:#b4432f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-size:15.5px;line-height:1.6;
+    padding:26px 16px 80px;display:flex;justify-content:center;-webkit-font-smoothing:antialiased}
+  .shell{width:100%;max-width:680px}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:28px;flex-wrap:wrap}
+  .mark{font-weight:800;font-size:19px;letter-spacing:-.03em}
+  .mark i{font-style:normal;color:var(--brand)}
+  .nav{display:flex;gap:6px;flex-wrap:wrap}
+  .nav a{font-size:13px;font-weight:500;color:var(--dim);text-decoration:none;padding:6px 11px;border-radius:7px}
+  .nav a:hover{background:var(--brand-soft);color:var(--brand)}
+  .nav a.on{background:var(--brand-soft);color:var(--brand)}
+
+  h1{font-size:clamp(26px,5.6vw,34px);line-height:1.14;letter-spacing:-.03em;font-weight:800;margin:0 0 8px}
+  .lede{font-size:16px;color:var(--dim);margin:0 0 26px;max-width:52ch}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:14px}
+  .card h2{font-size:17px;font-weight:700;letter-spacing:-.01em;margin:0 0 4px}
+  .how{font-size:13.5px;color:var(--dim);margin:0 0 16px}
+
+  /* SIGNATURE: the split */
+  .split{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:14px}
+  .split-in{padding:22px}
+  .split-lab{font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 14px}
+  .gross{font-family:"DM Mono",monospace;font-weight:500;font-size:clamp(30px,8vw,44px);
+    line-height:1;letter-spacing:-.02em;margin:0 0 3px}
+  .gross small{font-size:13px;color:var(--faint);letter-spacing:.06em;margin-left:8px}
+  .bar{display:flex;height:34px;border-radius:8px;overflow:hidden;margin:16px 0 0}
+  .bar .m{background:var(--brand);display:flex;align-items:center;padding-left:12px;
+    font-family:"DM Mono",monospace;font-size:12px;color:#fff;white-space:nowrap}
+  .bar .f{background:#f0b429;display:flex;align-items:center;justify-content:flex-end;padding-right:12px;
+    font-family:"DM Mono",monospace;font-size:12px;color:#3d2b00;white-space:nowrap}
+  .legs{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:10px;
+    font-size:12.5px;color:var(--dim)}
+  .legs b{color:var(--ink);font-weight:600}
+  .cmp{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);
+    font-family:"DM Mono",monospace;font-size:12px;color:var(--dim)}
+  .cmp b{color:var(--ink)}
+  .cmp .save{color:var(--brand)}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+    border-top:1px solid var(--line)}
+  .stats > div{background:var(--card);padding:14px 12px;text-align:center}
+  .stats dt{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 4px}
+  .stats dd{margin:0;font-family:"DM Mono",monospace;font-size:16px;font-weight:500}
+
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--dim);margin:0 0 6px}
+  input{width:100%;font-family:"DM Mono",monospace;font-size:15px;padding:11px 13px;
+    border:1px solid var(--line-2);border-radius:9px;background:#fff;color:var(--ink);margin-bottom:12px}
+  input:focus-visible{outline:2px solid var(--brand);outline-offset:-1px;border-color:transparent}
+  input::placeholder{color:#b6bec7}
+  button{font-family:"Plus Jakarta Sans",sans-serif;font-size:14.5px;font-weight:600;border:0;border-radius:9px;
+    padding:12px 18px;cursor:pointer;width:100%;background:var(--brand);color:#fff;transition:filter .14s}
+  button:hover:not(:disabled){filter:brightness(1.08)}
+  button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  button:disabled{background:#eceff2;color:#a8b1ba;cursor:not-allowed}
+  button.ghost{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line-2)}
+  button.ghost:hover:not(:disabled){background:#f6f7f9;filter:none}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .why{font-family:"DM Mono",monospace;font-size:11.5px;line-height:1.65;color:var(--dim);margin:10px 0 0}
+  .why.warn{color:var(--warn)}
+  .why.ok{color:var(--brand)}
+
+  .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 0;
+    border-top:1px solid var(--line);font-size:14px}
+  .row:first-child{border-top:0}
+  .row dt{color:var(--dim);margin:0}
+  .row dd{margin:0;font-family:"DM Mono",monospace;font-weight:500}
+
+  .link{background:var(--brand-soft);border-radius:9px;padding:12px 14px;margin:12px 0 0;
+    font-family:"DM Mono",monospace;font-size:11.5px;color:#0b5c50;word-break:break-all;line-height:1.6}
+
+  .note{font-family:"DM Mono",monospace;font-size:11px;line-height:1.75;color:var(--faint);
+    margin-top:22px;text-align:center}
+  .note a{color:var(--dim)}
+  .disc{border-left:2px solid var(--line-2);padding:2px 0 2px 14px;margin:16px 0 0;
+    font-size:12.5px;color:var(--faint);line-height:1.7}
+  a{color:var(--brand)}
+  .hidden{display:none !important}
+  @media (max-width:560px){ .two{grid-template-columns:1fr} .stats{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="mark">Term<i>inal</i></div>
+    <nav class="nav">
+      <a href="./processor.html">Overview</a>
+      <a href="./terminal.html" class="on">Accept</a>
+      <a href="./interchange.html">Stake</a>
+      <a href="./processor-guide.html">How it works</a>
+    </nav>
+  </div>
+
+  <h1>Take a payment. Keep 97.5% of it.</h1>
+  <p class="lede">Settles in the same transaction — not in two days. The 2.5% doesn't go to a company; it goes to whoever staked.</p>
+
+  <!-- SIGNATURE: the split -->
+  <section class="split">
+    <div class="split-in">
+      <p class="split-lab">What a payment looks like</p>
+      <p class="gross" id="grossOut">100.00<small>USDC</small></p>
+      <div class="bar">
+        <div class="m" id="barM" style="width:97.5%">97.50 to you</div>
+        <div class="f" id="barF" style="width:2.5%">2.50</div>
+      </div>
+      <div class="legs">
+        <span>You receive <b id="netOut">97.50</b> instantly</span>
+        <span><b id="feeOut">2.50</b> to the staking pool</span>
+      </div>
+      <p class="cmp" id="cmpOut"></p>
+    </div>
+    <dl class="stats">
+      <div><dt>Volume</dt><dd id="sVol">—</dd></div>
+      <div><dt>Payments</dt><dd id="sPay">—</dd></div>
+      <div><dt>Merchants</dt><dd id="sMerch">—</dd></div>
+    </dl>
+  </section>
+
+  <section class="card">
+    <h2>Your account</h2>
+    <p class="how" id="acctHow">Connect a wallet to open one. Anyone can — there's no application and no approval.</p>
+    <button id="connectBtn">Connect wallet</button>
+    <div id="acctBody" class="hidden">
+      <dl style="margin:0">
+        <div class="row"><dt>Trading as</dt><dd id="mName">—</dd></div>
+        <div class="row"><dt>Paid out to</dt><dd id="mPayout">—</dd></div>
+        <div class="row"><dt>Received</dt><dd id="mRecv">—</dd></div>
+        <div class="row"><dt>Fees paid</dt><dd id="mFees">—</dd></div>
+        <div class="row"><dt>Payments taken</dt><dd id="mCount">—</dd></div>
+      </dl>
+      <div class="link" id="payLink"></div>
+      <div class="two" style="margin-top:12px">
+        <button id="copyBtn" class="ghost">Copy pay link</button>
+        <button id="closeBtn" class="ghost">Stop accepting</button>
+      </div>
+    </div>
+    <p class="why" id="acctWhy"></p>
+  </section>
+
+  <section class="card hidden" id="openPanel">
+    <h2>Open an account</h2>
+    <p class="how">Takes one transaction. Nothing is held here — your share of every payment goes straight to the address you name.</p>
+    <label for="oName">Trading name</label>
+    <input id="oName" placeholder="Mechanical Temp LLC" maxlength="60" autocomplete="off">
+    <label for="oPayout">Pay me at</label>
+    <input id="oPayout" placeholder="leave blank to use this wallet" autocomplete="off">
+    <button id="openBtn">Open it</button>
+    <p class="why" id="openWhy"></p>
+  </section>
+
+  <section class="card" id="payPanel">
+    <h2 id="payTitle">Pay a merchant</h2>
+    <p class="how" id="payHow">The amount shown is the amount charged. The fee comes out of it, not on top of it.</p>
+    <label for="pTo">Merchant address</label>
+    <input id="pTo" placeholder="0x…" autocomplete="off">
+    <label for="pAmt">Amount (USDC)</label>
+    <input id="pAmt" placeholder="100.00" inputmode="decimal" autocomplete="off">
+    <label for="pRef">Reference — public, optional</label>
+    <input id="pRef" placeholder="INV-1042" maxlength="60" autocomplete="off">
+    <button id="payBtn" disabled>Pay</button>
+    <p class="why" id="payWhy"></p>
+  </section>
+
+  <p class="note">
+    Terminal <a href="https://testnet.arcscan.app/address/0xC168439DbFA9Ea78C32A0e3dB99eBA9284B860A3" target="_blank" rel="noopener">0xC168…60A3</a> ·
+    fees to <a href="https://testnet.arcscan.app/address/0xa551b604bf2BEd9D52cA80e5602836B67403b98E" target="_blank" rel="noopener">Interchange</a><br>
+    Arc Testnet · unaudited · play money only
+  </p>
+  <div class="disc">
+    No chargebacks, no disputes, no refunds this contract can enforce, no fraud screening and no compliance of any kind. A card network is mostly those things and only incidentally a way to move money — this is the moving-money part, which is the easy part.
+  </div>
+</div>
+
+<script>
+const NET={ label:"Arc Testnet", chainId:5042002,
+  rpcs:["https://rpc.blockdaemon.testnet.arc.network","https://arc-testnet.drpc.org","https://rpc.quicknode.testnet.arc.network","https://5042002.rpc.thirdweb.com","https://rpc.testnet.arc.network","https://rpc.testnet.arc.io"],
+  explorer:"https://testnet.arcscan.app",
+  terminal:"0xC168439DbFA9Ea78C32A0e3dB99eBA9284B860A3",
+  usdc:"0x3600000000000000000000000000000000000000" };
+const TM=NET.terminal, USDC=NET.usdc, RPCS=NET.rpcs, CHAIN=NET.chainId;
+const DEC=6n;
+
+const ABI=[
+  "function book() view returns (tuple(uint256 volume,uint256 feesRouted,uint256 payments,uint256 merchants,uint16 feeBps,address sink))",
+  "function merchantOf(address) view returns (tuple(bool exists,bool closed,address payout,string name,uint256 received,uint256 feesPaid,uint32 payments,uint64 since))",
+  "function quote(uint256) view returns (uint256 gross,uint256 net,uint256 fee,uint256 stripeWouldCost)",
+  "function open(string,address)","function setPayout(address)","function close()",
+  "function pay(address,uint256,string)",
+  "error ZeroAddress()","error ZeroAmount()","error NotRegistered()","error AlreadyRegistered()",
+  "error MerchantClosed()","error BelowMinimum(uint256 sent,uint256 minimum)","error Reentrant()"
+];
+const USDC_ABI=[
+  "function approve(address,uint256) returns (bool)",
+  "function allowance(address,address) view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)"
+];
+const IFACE=new ethers.Interface(ABI);
+const ARC={chainId:"0x"+CHAIN.toString(16),chainName:NET.label,
+  nativeCurrency:{name:"USDC",symbol:"USDC",decimals:18},rpcUrls:RPCS,blockExplorerUrls:[NET.explorer]};
+
+const $=id=>document.getElementById(id);
+const f=v=>Number(ethers.formatUnits(v,DEC)).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const p6=s=>ethers.parseUnits(s,DEC);
+const shortA=a=>a.slice(0,6)+"…"+a.slice(-4);
+
+const pool=RPCS.map(u=>new ethers.JsonRpcProvider(u));
+let wp=null;
+const readers=()=>wp?[wp,...pool]:pool;
+async function rd(addr,abi,fn){ let e; for(const p of readers()){ try{ return await fn(new ethers.Contract(addr,abi,p)); }catch(x){e=x;} } throw e; }
+
+let signer=null,me=null,merch=null,bk=null,allowance=0n,bal=0n;
+
+const qp=new URLSearchParams(location.search);
+if(qp.get("to")) $("pTo").value=qp.get("to");
+if(qp.get("amt")) $("pAmt").value=qp.get("amt");
+if(qp.get("ref")) $("pRef").value=qp.get("ref");
+
+/* ---------------- read ---------------- */
+async function loadBook(){
+  try{
+    bk=await rd(TM,ABI,c=>c.book());
+    $("sVol").textContent=f(bk.volume);
+    $("sPay").textContent=bk.payments.toString();
+    $("sMerch").textContent=bk.merchants.toString();
+    quote();
+  }catch(e){ console.error(e); }
+}
+
+async function quote(){
+  const v=$("pAmt").value.trim();
+  let amt;
+  try{ amt = (v && !isNaN(v) && Number(v)>0) ? p6(v) : p6("100"); }catch{ amt=p6("100"); }
+  try{
+    const q=await rd(TM,ABI,c=>c.quote(amt));
+    const pct=Number(bk?bk.feeBps:250n)/100;
+    $("grossOut").innerHTML=f(q[0])+'<small>USDC</small>';
+    $("barM").style.width=(100-pct)+"%";
+    $("barF").style.width=pct+"%";
+    $("barM").textContent=f(q[1])+" to you";
+    $("barF").textContent=f(q[2]);
+    $("netOut").textContent=f(q[1]);
+    $("feeOut").textContent=f(q[2]);
+    const save=q[3]-q[2];
+    $("cmpOut").innerHTML = save>0n
+      ? 'A card processor at 2.9% + 30¢ would take <b>'+f(q[3])+'</b> — you keep <span class="save">'+f(save)+' more</span>.'
+      : 'A card processor at 2.9% + 30¢ would take <b>'+f(q[3])+'</b>, which is less. Flat fees favour small tickets.';
+  }catch(e){ console.error(e); }
+}
+$("pAmt").addEventListener("input",()=>{ quote(); checkPay(); });
+
+async function loadMerchant(){
+  if(!me) return;
+  try{
+    const m=await rd(TM,ABI,c=>c.merchantOf(me));
+    merch = m.exists ? {closed:m.closed,payout:m.payout,name:m.name,received:m.received,
+                        feesPaid:m.feesPaid,payments:Number(m.payments),since:Number(m.since)} : null;
+    renderMerchant();
+  }catch(e){ console.error(e); }
+}
+
+function renderMerchant(){
+  $("openPanel").classList.toggle("hidden", !!merch);
+  $("acctBody").classList.toggle("hidden", !merch);
+  if(!merch){
+    $("acctHow").textContent = me
+      ? "You don't have an account yet. Opening one takes a single transaction."
+      : "Connect a wallet to open one. Anyone can — there's no application and no approval.";
+    $("acctWhy").textContent="";
+    return;
+  }
+  $("acctHow").textContent = merch.closed
+    ? "This account has stopped accepting payments. The record stays readable."
+    : "Open since "+new Date(merch.since*1000).toLocaleDateString()+".";
+  $("mName").textContent=merch.name||"(unnamed)";
+  $("mPayout").textContent = merch.payout.toLowerCase()===me.toLowerCase() ? "this wallet" : shortA(merch.payout);
+  $("mRecv").textContent=f(merch.received)+" USDC";
+  $("mFees").textContent=f(merch.feesPaid)+" USDC";
+  $("mCount").textContent=merch.payments;
+
+  const url=location.origin+location.pathname+"?to="+me;
+  $("payLink").textContent=url;
+  $("acctWhy").textContent = merch.payments===0
+    ? "Nothing taken yet. Send the link above to a customer, or add &amt=100&ref=INV-1042 to prefill it."
+    : "Every payment settled the moment it was signed — nothing is waiting to arrive.";
+  $("acctWhy").className="why";
+}
+
+/* ---------------- connect ---------------- */
+(async function boot(){
+  await loadBook();
+  if(!window.ethereum) return;
+  try{ const a=await window.ethereum.request({method:"eth_accounts"}); if(a&&a.length) await connect(true); }catch(_){}
+})();
+$("connectBtn").onclick=()=>connect(false);
+
+async function connect(silent){
+  if(!window.ethereum){
+    if(!silent){ $("acctWhy").textContent="No wallet in this browser."; $("acctWhy").className="why warn"; }
+    return;
+  }
+  try{
+    if(!silent) await window.ethereum.request({method:"eth_requestAccounts"});
+    const n=await window.ethereum.request({method:"eth_chainId"});
+    if(parseInt(n,16)!==CHAIN){
+      try{ await window.ethereum.request({method:"wallet_switchEthereumChain",params:[{chainId:ARC.chainId}]}); }
+      catch(e){ if(e.code===4902) await window.ethereum.request({method:"wallet_addEthereumChain",params:[ARC]}); else throw e; }
+    }
+    const bp=new ethers.BrowserProvider(window.ethereum);
+    wp=bp; signer=await bp.getSigner(); me=await signer.getAddress();
+    $("connectBtn").classList.add("hidden");
+    try{ bal=await rd(USDC,USDC_ABI,c=>c.balanceOf(me));
+         allowance=await rd(USDC,USDC_ABI,c=>c.allowance(me,TM)); }catch(_){}
+    await loadMerchant();
+    checkPay();
+  }catch(e){
+    if(!silent){ $("acctWhy").textContent="Wallet didn't connect: "+(e.shortMessage||e.message); $("acctWhy").className="why warn"; }
+  }
+}
+
+/* ---------------- pay ---------------- */
+function checkPay(){
+  if(!signer){ $("payBtn").disabled=true; $("payBtn").textContent="Connect wallet to pay"; 
+    $("payBtn").onclick=()=>connect(false); $("payBtn").disabled=false; return; }
+  const to=$("pTo").value.trim(), v=$("pAmt").value.trim();
+  if(!ethers.isAddress(to)){ $("payBtn").disabled=true; $("payBtn").textContent="Enter a merchant address"; return; }
+  if(!v||isNaN(v)||Number(v)<=0){ $("payBtn").disabled=true; $("payBtn").textContent="Enter an amount"; return; }
+  let a; try{ a=p6(v); }catch{ return; }
+  if(a>bal){ $("payBtn").disabled=true; $("payBtn").textContent="Not enough USDC";
+    $("payWhy").textContent="You hold "+f(bal)+" USDC, and gas comes out of the same balance.";
+    $("payWhy").className="why warn"; return; }
+  $("payBtn").disabled=false;
+  $("payBtn").onclick=doPay;
+  const needs=allowance<a;
+  $("payBtn").textContent = needs ? "Approve, then pay "+f(a) : "Pay "+f(a)+" USDC";
+  $("payWhy").textContent = needs
+    ? "Two signatures the first time: one to permit the contract, one to pay."
+    : "One signature. Settles immediately.";
+  $("payWhy").className="why";
+}
+$("pTo").addEventListener("input",checkPay);
+
+const ERRS={
+  NotRegistered:"That address doesn't have a Terminal account.",
+  AlreadyRegistered:"You already have an account.",
+  MerchantClosed:"This merchant has stopped accepting payments.",
+  BelowMinimum:"Below the 0.01 USDC minimum — under that the fee rounds to nothing.",
+  ZeroAmount:"Amount can't be zero.",
+  ZeroAddress:"That address isn't valid."
+};
+function why(e){
+  const m=e.shortMessage||e.message||"";
+  if(m.includes("rejected")||e?.code==="ACTION_REJECTED") return "You rejected the signature. Nothing was charged.";
+  let r=e?.revert;
+  if(!r){ const d=e?.data||e?.info?.error?.data||e?.error?.data;
+    if(typeof d==="string"){ try{ r=IFACE.parseError(d); }catch(_){} } }
+  if(r&&ERRS[r.name]) return ERRS[r.name];
+  if(r) return "Reverted: "+r.name;
+  if(m.includes("insufficient funds")) return "Not enough USDC to cover it plus gas.";
+  return "Failed: "+m;
+}
+
+async function doPay(){
+  const b=$("payBtn"); b.disabled=true;
+  try{
+    const to=$("pTo").value.trim(), a=p6($("pAmt").value.trim());
+    if(allowance<a){
+      b.textContent="Approve…";
+      const u=new ethers.Contract(USDC,USDC_ABI,signer);
+      await (await u.approve(TM,a)).wait(); allowance=a;
+    }
+    b.textContent="Paying…";
+    const c=new ethers.Contract(TM,ABI,signer);
+    await (await c.pay(to,a,$("pRef").value.trim())).wait();
+    $("pAmt").value=""; $("pRef").value="";
+    try{ bal=await rd(USDC,USDC_ABI,x=>x.balanceOf(me)); }catch(_){}
+    await loadBook(); await loadMerchant();
+    $("payWhy").textContent="Paid. The merchant has it and the fee is already in the staking pool.";
+    $("payWhy").className="why ok";
+  }catch(e){ $("payWhy").textContent=why(e); $("payWhy").className="why warn"; }
+  finally{ b.disabled=false; checkPay(); }
+}
+
+$("openBtn").onclick=async()=>{
+  const b=$("openBtn"); b.disabled=true; b.textContent="Confirm…";
+  try{
+    if(!signer) throw new Error("Connect a wallet first");
+    const nm=$("oName").value.trim();
+    if(!nm) throw new Error("Give it a trading name");
+    const po=$("oPayout").value.trim();
+    if(po && !ethers.isAddress(po)) throw new Error("That payout address isn't valid");
+    const c=new ethers.Contract(TM,ABI,signer);
+    await (await c.open(nm, po||ethers.ZeroAddress)).wait();
+    await loadBook(); await loadMerchant();
+    $("openWhy").textContent="Open. Share your pay link and money lands the moment someone signs.";
+    $("openWhy").className="why ok";
+  }catch(e){ $("openWhy").textContent=why(e); $("openWhy").className="why warn"; }
+  finally{ b.disabled=false; b.textContent="Open it"; }
+};
+
+$("copyBtn").onclick=()=>{
+  navigator.clipboard.writeText($("payLink").textContent);
+  $("acctWhy").textContent="Copied."; $("acctWhy").className="why ok";
+};
+
+let armClose=false;
+$("closeBtn").onclick=async()=>{
+  const b=$("closeBtn");
+  if(!armClose){
+    armClose=true; b.textContent="Confirm — stop accepting?";
+    $("acctWhy").textContent="Closing stops new payments permanently. The record stays readable but the account can't be reopened.";
+    $("acctWhy").className="why warn";
+    setTimeout(()=>{ if(armClose){ armClose=false; b.textContent="Stop accepting"; } },6000);
+    return;
+  }
+  armClose=false; b.disabled=true; b.textContent="Confirm…";
+  try{
+    const c=new ethers.Contract(TM,ABI,signer);
+    await (await c.close()).wait();
+    await loadMerchant();
+  }catch(e){ $("acctWhy").textContent=why(e); $("acctWhy").className="why warn"; b.disabled=false; b.textContent="Stop accepting"; }
+};
+
+checkPay();
+</script>
+</body>
+</html>
