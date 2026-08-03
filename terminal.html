@@ -221,7 +221,7 @@
   <p class="note">
     Terminal <a href="https://testnet.arcscan.app/address/0xDBc6e2ACC9B739417412AD675ef0740E3fA224f9" target="_blank" rel="noopener">0xDBc6…24f9</a> ·
     fees to <a href="https://testnet.arcscan.app/address/0x9B57a2cd9D721c0153851FB410D8f7948CB27F95" target="_blank" rel="noopener">Interchange</a><br>
-    Arc Testnet · unaudited · play money only
+    Arc Testnet · unaudited · play money from <a href="https://faucet.circle.com" target="_blank" rel="noopener">faucet.circle.com</a>
   </p>
   <div class="disc">
     SWIPE is minted by the staking pool, and this rail's permission to trigger that was set once at deployment and can never be moved or revoked. There is no other mint path — no premine, no treasury, no issuance function. Supply is exactly the volume that has been processed.
@@ -452,7 +452,8 @@ function checkPay(){
   if(!v||isNaN(v)||Number(v)<=0){ $("payBtn").disabled=true; $("payBtn").textContent="Enter an amount"; return; }
   let a; try{ a=p6(v); }catch{ return; }
   if(a>bal){ $("payBtn").disabled=true; $("payBtn").textContent="Not enough USDC";
-    $("payWhy").textContent="You hold "+f(bal)+" USDC, and gas comes out of the same balance.";
+    $("payWhy").innerHTML="You hold "+f(bal)+" USDC, and gas comes out of the same balance. "+
+      'Testnet USDC is free from <a href="https://faucet.circle.com" target="_blank" rel="noopener">Circle\'s faucet</a>.';
     $("payWhy").className="why warn"; return; }
   $("payBtn").disabled=false;
   $("payBtn").onclick=doPay;
